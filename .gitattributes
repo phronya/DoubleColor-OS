@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
+profiledef.sh text eol=lf
+*.iso binary
+*.part* binary
