@@ -1,0 +1,6 @@
+build/
+*.iso
+*.sha256
+SHA256SUMS
+__pycache__/
+*.pyc
