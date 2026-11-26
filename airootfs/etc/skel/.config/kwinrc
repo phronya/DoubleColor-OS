@@ -1,0 +1,13 @@
+[org.kde.kdecoration2]
+ButtonsOnLeft=
+ButtonsOnRight=IAX
+CloseOnDoubleClickOnMenu=false
+
+[Compositing]
+MaxFPS=60
+
+[Effect-blur]
+Enabled=false
+
+[Effect-backgroundcontrast]
+Enabled=false
