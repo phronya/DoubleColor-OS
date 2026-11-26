@@ -1,0 +1,5 @@
+[General]
+BrowserApplication=chromium.desktop
+
+[KDE]
+SingleClick=false
