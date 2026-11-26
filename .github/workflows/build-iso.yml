@@ -1,0 +1,108 @@
+name: Build ISO
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: DoubleColor OS ISO
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - name: Подготовка Arch Linux
+        run: |
+          pacman-key --init
+          pacman-key --populate archlinux
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed git
+          df -h / | tail -n1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Версия сборки
+        id: ver
+        run: echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Установка archiso
+        run: pacman -S --noconfirm --needed archiso
+
+      - name: Сборка ISO
+        run: |
+          chmod +x prepare.sh build.sh
+          ./build.sh
+
+      - name: Подготовка артефактов
+        id: pack
+        run: |
+          set -euo pipefail
+          cd build/out
+          iso="$(ls -1 ./*.iso | head -n1)"
+          sha256sum "${iso#./}" > SHA256SUMS
+          size="$(stat -c%s "$iso")"
+          echo "Размер ISO: $((size / 1024 / 1024)) МБ"
+          if [ "$size" -gt 1800000000 ]; then
+            split -b 1800M -d -a 2 "$iso" "${iso}.part"
+            rm -f "$iso"
+            echo "split=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "split=0" >> "$GITHUB_OUTPUT"
+          fi
+          ls -lh
+
+      - name: Инструкция в summary
+        run: |
+          {
+            echo "## DoubleColor OS ${{ steps.ver.outputs.version }}: сборка завершена"
+            echo
+            echo "Скачайте артефакты со страницы запуска (внизу, раздел Artifacts)."
+            echo
+            echo 'Если артефакт заканчивается на `-parts`, ISO разбит на части:'
+            echo
+            echo '```bash'
+            echo 'cat doublecoloros.iso.part* > doublecoloros.iso'
+            echo 'sha256sum -c SHA256SUMS'
+            echo '```'
+            echo
+            echo "Запись на USB:"
+            echo
+            echo '```bash'
+            echo 'sudo dd if=doublecolor-os.iso of=/dev/sdX bs=8M status=progress oflag=sync'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Загрузка ISO целиком
+        if: steps.pack.outputs.split == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: doublecoloros
+          path: build/out/*.iso
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Загрузка частей ISO
+        if: steps.pack.outputs.split == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: doublecoloros-parts
+          path: build/out/*.part*
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Загрузка контрольных сумм
+        uses: actions/upload-artifact@v4
+        with:
+          name: doublecoloros-sha256
+          path: build/out/SHA256SUMS
+          retention-days: 14
+          if-no-files-found: error
