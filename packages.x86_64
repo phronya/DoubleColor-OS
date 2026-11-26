@@ -89,7 +89,6 @@ spectacle
 ark
 kwallet-pam
 libwacom
-wacomtablet
 
 # --- XWayland и мелкие утилиты ---
 xorg-xwayland
@@ -156,7 +155,6 @@ vkd3d
 
 # --- diagnostika i monitoring (Ctrl+Shift+Tab) ---
 btop
-ps_mem
 lm_sensors
 ncdu
 fastfetch

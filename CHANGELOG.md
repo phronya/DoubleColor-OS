@@ -23,7 +23,7 @@ Kernel-античиты не поддерживаются — это огран�
   `kdeplasma-addons`), простые анимации KWin;
 - вход: `sddm.service` в `graphical.target`; автологин root — только на Live,
   в установленную систему файл автологина не переносится;
-- перо и планшеты: `libwacom`, `wacomtablet`, настройка в параметрах системы;
+- перо и планшеты: `libwacom`, модуль «Графический планшет» в составе Plasma;
 - сеть: NetworkManager + `plasma-nm` (Wi-Fi и Ethernet), `bluedevil` (Bluetooth);
 - браузер: `chromium` предустановлен; `install-chrome.sh` ставит Google Chrome из AUR
   (в официальных репозиториях Arch его нет);
