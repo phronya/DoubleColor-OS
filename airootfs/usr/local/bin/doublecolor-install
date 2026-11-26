@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# doublecolor-install - ustanovka DoubleColor OS na disk
+# Zapuskaetsya s Live-obraza: sudo doublecolor-install
+set -euo pipefail
+
+TARGET="/mnt"
+SKIP_INSTALL=0
+PACKAGES_FILE="/usr/share/doublecolor/packages.txt"
+LIVE_ONLY="mkinitcpio-archiso archiso squashfs-tools archinstall"
+
+say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
+die() { echo "ОШИБКА: $*" >&2; exit 1; }
+
+usage() {
+    cat <<'EOF'
+Использование: doublecolor-install [ключи]
+
+  --target=ПУТЬ     точка монтирования целевой системы (по умолчанию /mnt)
+  --skip-install    не запускать archinstall, только донастроить готовую систему
+  -h, --help        эта справка
+
+Что делает:
+  1. запускает archinstall (ядро linux-zen, профиль minimal, ext4, без swap);
+  2. переносит конфигурацию DoubleColor: /etc/skel, ZRAM, sysctl, журнал, локали,
+     pacman.conf с multilib;
+  3. ставит в целевую систему рабочий набор пакетов (i3, Wine, офис, печать);
+  4. включает сервисы, генерирует локали, обновляет загрузчик.
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --target=*)     TARGET="${1#*=}" ;;
+        --skip-install) SKIP_INSTALL=1 ;;
+        -h|--help)      usage; exit 0 ;;
+        *)              echo "Неизвестный аргумент: $1" >&2; usage >&2; exit 1 ;;
+    esac
+    shift
+done
+
+[ "$(id -u)" -eq 0 ] || die "нужен root: sudo doublecolor-install"
+command -v arch-chroot >/dev/null 2>&1 || \
+    die "нет arch-chroot. Установите: pacman -S arch-install-scripts"
+[ -f "$PACKAGES_FILE" ] || die "нет списка пакетов: $PACKAGES_FILE"
+
+# ---------- шаг 1: установка базовой системы ----------
+if [ "$SKIP_INSTALL" -eq 0 ]; then
+    command -v archinstall >/dev/null 2>&1 || die "нет archinstall на Live-образе"
+    say "Шаг 1 из 4: archinstall"
+    cat <<'EOF'
+Рекомендуемые ответы в archinstall:
+  * ядро                linux-zen
+  * профиль             minimal, без рабочего стола
+  * файловая система    ext4
+  * swap                не создавать (ZRAM уже настроен)
+  * точка монтирования  /mnt
+  * пользователь        добавить в группу wheel
+EOF
+    printf '\nЗапустить archinstall? [y/N] '
+    read -r answer
+    case "$answer" in
+        [yY]*) archinstall ;;
+        *)     echo "Отменено."; exit 0 ;;
+    esac
+fi
+
+# ---------- шаг 2: проверка и перенос конфигурации ----------
+say "Шаг 2 из 4: проверка целевой системы"
+[ -d "$TARGET" ] || die "каталог $TARGET не существует"
+mountpoint -q "$TARGET" || die "$TARGET не смонтирован (укажите --target=ПУТЬ)"
+[ -f "$TARGET/etc/os-release" ] || die "в $TARGET нет установленной системы"
+[ -d "$TARGET/etc/skel" ] || die "в $TARGET нет /etc/skel"
+
+say "Переношу конфигурацию DoubleColor"
+copy_file() {
+    [ -f "$1" ] || die "на Live нет файла $1"
+    install -Dm644 "$1" "$TARGET$2"
+    echo "   $2"
+}
+copy_file /etc/pacman.conf                          /etc/pacman.conf
+copy_file /etc/locale.gen                           /etc/locale.gen
+copy_file /etc/locale.conf                          /etc/locale.conf
+copy_file /etc/vconsole.conf                        /etc/vconsole.conf
+copy_file /etc/sysctl.d/99-work.conf                /etc/sysctl.d/99-work.conf
+copy_file /etc/systemd/journald.conf.d/99-work.conf /etc/systemd/journald.conf.d/99-work.conf
+copy_file /etc/systemd/zram-generator.conf          /etc/systemd/zram-generator.conf
+
+echo "   /etc/skel"
+cp -a /etc/skel/. "$TARGET/etc/skel/"
+
+echo "   /etc/sudoers.d/10-wheel"
+install -d -m 750 "$TARGET/etc/sudoers.d"
+printf '%%wheel ALL=(ALL:ALL) ALL\n' > "$TARGET/etc/sudoers.d/10-wheel"
+chmod 440 "$TARGET/etc/sudoers.d/10-wheel"
+
+say "Обновляю домашние каталоги"
+HOOK='[ -f "$HOME/.profile" ] && . "$HOME/.profile"'
+for home in "$TARGET"/home/*; do
+    [ -d "$home" ] || continue
+    cp -a -n /etc/skel/. "$home/" 2>/dev/null || true
+    if [ -f "$home/.bash_profile" ]; then
+        grep -qF 'DoubleColor OS' "$home/.bash_profile" || \
+            printf '\n# DoubleColor OS: подключение ~/.profile\n%s\n' "$HOOK" >> "$home/.bash_profile"
+    else
+        printf '# DoubleColor OS\n%s\n' "$HOOK" > "$home/.bash_profile"
+    fi
+    owner="$(stat -c '%u:%g' "$home")"
+    chown -R "$owner" "$home"
+    echo "   ${home#"$TARGET"} (владелец $owner)"
+done
+if [ -d "$TARGET/root" ]; then
+    cp -a -n /etc/skel/. "$TARGET/root/" 2>/dev/null || true
+    echo "   /root"
+fi
+
+# ---------- шаг 3: пакеты ----------
+PKGS=()
+while IFS= read -r line; do
+    line="${line%%#*}"
+    line="$(printf '%s' "$line" | tr -d '[:space:]')"
+    [ -n "$line" ] || continue
+    case " $LIVE_ONLY " in
+        *" $line "*) continue ;;
+    esac
+    PKGS+=("$line")
+done < "$PACKAGES_FILE"
+
+[ "${#PKGS[@]}" -gt 0 ] || die "список пакетов пуст"
+
+say "Шаг 3 из 4: установка окружения (${#PKGS[@]} пакетов, ~7 ГБ)"
+arch-chroot "$TARGET" pacman -S --needed --noconfirm "${PKGS[@]}"
+
+# ---------- шаг 4: сервисы, локали, загрузчик ----------
+say "Шаг 4 из 4: сервисы и локали"
+arch-chroot "$TARGET" /bin/bash -c '
+for unit in NetworkManager.service bluetooth.service cups.socket \
+            avahi-daemon.service pcscd.socket systemd-timesyncd.service \
+            fstrim.timer paccache.timer; do
+    systemctl enable "$unit" 2>/dev/null || echo "   пропущено: $unit"
+done
+systemctl daemon-reload
+locale-gen
+paccache -r 2>/dev/null || true
+' || die "настройка в chroot завершилась ошибкой"
+
+say "Загрузчик"
+if [ -f "$TARGET/etc/default/grub" ]; then
+    arch-chroot "$TARGET" grub-mkconfig -o /boot/grub/grub.cfg \
+        || echo "   ВНИМАНИЕ: grub-mkconfig завершился с ошибкой"
+    echo "   GRUB: конфигурация обновлена"
+elif [ -d "$TARGET/boot/loader/entries" ]; then
+    if grep -rqs 'linux-zen' "$TARGET/boot/loader/entries"; then
+        echo "   systemd-boot: запись для linux-zen найдена"
+    else
+        echo "   ВНИМАНИЕ: в systemd-boot нет записи для linux-zen."
+        echo "   Система загрузится с прежним ядром. Добавьте запись вручную"
+        echo "   (пример есть в README, раздел «Установка на диск»)."
+    fi
+else
+    echo "   Загрузчик не распознан — проверьте /boot вручную."
+fi
+
+say "Готово"
+cat <<EOF
+
+DoubleColor OS установлена в $TARGET.
+
+Первый запуск:
+  * вход на tty1 автоматически поднимает i3;
+  * Super+N — окно «Диски», Ctrl+Shift+Tab — монитор нагрузки;
+  * yay:    ~/.local/bin/install-yay.sh
+  * Wine:   ~/.local/bin/wine-bootstrap.sh win64
+  * NVIDIA: pacman -S nvidia-open-dkms linux-zen-headers
+
+Не забудьте отмонтировать целевые разделы перед перезагрузкой:
+  umount -R $TARGET && reboot
+EOF

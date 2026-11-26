@@ -1,0 +1,174 @@
+# DoubleColor: rabochaya sistema. Spisok paketov dlya mkarchiso.
+# Kommentarii vyrezayutsya prepare.sh pered sborkoy.
+
+# --- baza ---
+base
+linux-zen
+linux-firmware
+intel-ucode
+amd-ucode
+mkinitcpio
+mkinitcpio-archiso
+squashfs-tools
+pacman
+pacman-contrib
+pacman-mirrorlist
+reflector
+arch-install-scripts
+grub
+efibootmgr
+sudo
+nano
+less
+man-db
+man-pages
+bash-completion
+git
+openssh
+rsync
+tmux
+curl
+wget
+jq
+
+# --- ustanovka i diski (nuzhno na Live) ---
+archinstall
+gptfdisk
+parted
+e2fsprogs
+dosfstools
+exfatprogs
+ntfs-3g
+util-linux
+pciutils
+usbutils
+
+# --- set i bluetooth ---
+networkmanager
+network-manager-applet
+wpa_supplicant
+bluez
+bluez-utils
+avahi
+nss-mdns
+
+# --- pamjat: ZRAM vmesto swap na diske ---
+zram-generator
+
+# --- grafika: Mesa / Vulkan / VA-API ---
+mesa
+vulkan-icd-loader
+vulkan-radeon
+vulkan-intel
+libva-mesa-driver
+intel-media-driver
+libva-utils
+
+# --- рабочая среда Plasma: интерфейс как в Windows 10 ---
+plasma-desktop
+plasma-workspace
+kwin
+kscreen
+plasma-nm
+plasma-pa
+plasma-systemmonitor
+kdeplasma-addons
+bluedevil
+powerdevil
+power-profiles-daemon
+polkit-kde-agent
+xdg-desktop-portal-kde
+kde-gtk-config
+breeze-gtk
+kio-extras
+sddm
+konsole
+dolphin
+spectacle
+ark
+kwallet-pam
+libwacom
+wacomtablet
+
+# --- XWayland и мелкие утилиты ---
+xorg-xwayland
+maim
+xclip
+brightnessctl
+
+# --- диски: окно «Диски» с буквами A:/C: ---
+udisks2
+gtk3
+python-gobject
+polkit
+xdg-utils
+xdg-user-dirs
+
+# --- zvuk ---
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+pavucontrol
+playerctl
+alsa-utils
+
+# --- shrifty ---
+noto-fonts
+noto-fonts-emoji
+noto-fonts-cjk
+ttf-liberation
+ttf-dejavu
+terminus-font
+
+# --- pechat i skanirovanie ---
+cups
+cups-pdf
+cups-filters
+system-config-printer
+sane
+sane-airscan
+ipp-usb
+ghostscript
+pcsclite
+ccid
+
+# --- ofis i brauzer ---
+libreoffice-fresh
+zathura
+zathura-pdf-mupdf
+poppler
+chromium
+keepassxc
+
+# --- udalennyj dostup ---
+freerdp
+remmina
+
+# --- Wine: x86 i x64 Windows-prilozhenija ---
+wine
+wine-mono
+wine-gecko
+winetricks
+cabextract
+vkd3d
+
+# --- diagnostika i monitoring (Ctrl+Shift+Tab) ---
+btop
+ps_mem
+lm_sensors
+ncdu
+fastfetch
+p7zip
+unzip
+zip
+
+# --- sbor hintov iz AUR (yay) ---
+base-devel
+python
+
+# --- NE vklyucheno po umolchaniju ---
+# nvidia: nvidia-open-dkms linux-zen-headers nvidia-utils nvidia-settings
+# igry:  steam mangohud gamemode lib32-gamemode
+# 32-bit podderzhka pri starej sborke wine: lib32-glibc lib32-libgcc lib32-vulkan-icd-loader
+# Wayland-variant: hyprland xdg-desktop-portal-hyprland waybar fuzzel foot

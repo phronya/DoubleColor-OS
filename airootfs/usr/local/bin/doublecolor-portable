@@ -1,0 +1,300 @@
+#!/usr/bin/env bash
+# doublecolor-portable - ustanovka DoubleColor OS na USB-nositel / vneshnij disk
+# Sistema stavitsya celikom (ne Live): dannye sohranyayutsya mezhdu zagruzkami.
+set -euo pipefail
+
+DEVICE=""
+BOOTLOADER="grub"
+DRY_RUN=0
+LABEL="DOUBLECOLOR"
+TARGET="/mnt"
+USER_NAME="doublecolor"
+USER_PASS=""
+ASSUME_YES=0
+
+PACKAGES_FILE="/usr/share/doublecolor/packages.txt"
+PORTABLE_CONF="/usr/share/doublecolor/portable/mkinitcpio.conf"
+LIVE_ONLY="mkinitcpio-archiso archiso squashfs-tools archinstall"
+
+say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
+die() { echo "ОШИБКА: $*" >&2; exit 1; }
+run() {
+    if [ "$DRY_RUN" -eq 1 ]; then
+        printf '   [dry-run] %s\n' "$*"
+    else
+        "$@"
+    fi
+}
+
+part() {
+    local dev="$1" idx="$2"
+    if [[ "$dev" =~ [0-9]$ ]]; then
+        printf '%sp%s' "$dev" "$idx"
+    else
+        printf '%s%s' "$dev" "$idx"
+    fi
+}
+
+usage() {
+    cat <<'EOF'
+Использование: doublecolor-portable --device=/dev/sdX [ключи]
+
+  --device=/dev/sdX                 носитель для установки (обязательно)
+  --bootloader=grub|systemd-boot    по умолчанию grub
+  --label=ИМЯ                       метка корневого раздела (DOUBLECOLOR)
+  --user=ИМЯ                        имя пользователя (doublecolor)
+  --target=ПУТЬ                     точка монтирования (/mnt)
+  --dry-run                         показать план, ничего не менять
+  --yes                             не требовать подтверждения устройства
+  -h, --help                        эта справка
+
+Разметка: GPT, 1 МиБ BIOS boot, 1 ГиБ ESP (FAT32), остальное — ext4.
+Загрузчик ставится переносимо: GRUB --removable, systemd-boot --no-variables,
+поэтому носитель грузится на разных компьютерах без записи в NVRAM.
+EOF
+}
+
+cleanup() {
+    if mountpoint -q "$TARGET/boot" 2>/dev/null; then umount "$TARGET/boot" || true; fi
+    if mountpoint -q "$TARGET" 2>/dev/null; then umount -R "$TARGET" || true; fi
+}
+trap cleanup EXIT
+
+# ---------- аргументы ----------
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --device=*)     DEVICE="${1#*=}" ;;
+        --bootloader=*) BOOTLOADER="${1#*=}" ;;
+        --label=*)      LABEL="${1#*=}" ;;
+        --user=*)       USER_NAME="${1#*=}" ;;
+        --target=*)     TARGET="${1#*=}" ;;
+        --dry-run)      DRY_RUN=1 ;;
+        --yes)          ASSUME_YES=1 ;;
+        -h|--help)      usage; exit 0 ;;
+        *)              die "неизвестный аргумент: $1 (см. --help)" ;;
+    esac
+    shift
+done
+
+# ---------- проверки ----------
+[ "$(id -u)" -eq 0 ] || die "нужен root: sudo doublecolor-portable ..."
+[ -n "$DEVICE" ] || die "укажите --device=/dev/sdX"
+[ -b "$DEVICE" ] || die "$DEVICE не является блочным устройством"
+case "$BOOTLOADER" in
+    grub|systemd-boot) ;;
+    *) die "--bootloader=grub|systemd-boot" ;;
+esac
+[ -f "$PACKAGES_FILE" ] || die "нет $PACKAGES_FILE"
+[ -f "$PORTABLE_CONF" ] || die "нет $PORTABLE_CONF"
+
+for bin in pacstrap genfstab sgdisk mkfs.fat mkfs.ext4 blkid partprobe arch-chroot; do
+    command -v "$bin" >/dev/null 2>&1 || \
+        die "нет $bin — проверьте arch-install-scripts, gptfdisk, dosfstools, e2fsprogs"
+done
+
+live_src="$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null || true)"
+for src in "$live_src" "$(findmnt -no SOURCE / 2>/dev/null || true)"; do
+    [ -n "$src" ] || continue
+    base="$(lsblk -no PKNAME "$src" 2>/dev/null | head -n1 || true)"
+    [ -n "$base" ] || continue
+    if [ "/dev/$base" = "$DEVICE" ]; then
+        die "$DEVICE — носитель, с которого загружена система"
+    fi
+done
+
+if grep -q "^${DEVICE}" /proc/mounts; then
+    die "$DEVICE или его раздел уже смонтирован"
+fi
+if swapon --show=NAME --noheadings 2>/dev/null | grep -q "^${DEVICE}"; then
+    die "на $DEVICE активен swap"
+fi
+
+size_bytes="$(lsblk -bno SIZE "$DEVICE" | head -n1)"
+size_gib=$(( size_bytes / 1024 / 1024 / 1024 ))
+[ "$size_gib" -ge 8 ] || die "нужно не меньше 8 ГБ, на $DEVICE — ${size_gib} ГБ"
+
+ROOT_PART="$(part "$DEVICE" 3)"
+ESP_PART="$(part "$DEVICE" 2)"
+
+# ---------- список пакетов ----------
+PKGS=()
+while IFS= read -r line; do
+    line="${line%%#*}"
+    line="$(printf '%s' "$line" | tr -d '[:space:]')"
+    [ -n "$line" ] || continue
+    case " $LIVE_ONLY " in
+        *" $line "*) continue ;;
+    esac
+    PKGS+=("$line")
+done < "$PACKAGES_FILE"
+[ "${#PKGS[@]}" -gt 0 ] || die "список пакетов пуст"
+
+# ---------- план ----------
+say "План установки"
+printf '  носитель    : %s (%s ГБ)\n' "$DEVICE" "$size_gib"
+printf '  разделы     : GPT: 1M BIOS boot, 1G ESP, остальное %s\n' "$LABEL"
+printf '  корень      : %s\n' "$ROOT_PART"
+printf '  ESP         : %s\n' "$ESP_PART"
+printf '  загрузчик   : %s\n' "$BOOTLOADER"
+printf '  пользователь: %s\n' "$USER_NAME"
+printf '  пакетов     : %s\n' "${#PKGS[@]}"
+printf '  монтирование: %s\n' "$TARGET"
+echo
+
+if [ "$DRY_RUN" -eq 0 ] && [ "$ASSUME_YES" -eq 0 ]; then
+    echo "ВНИМАНИЕ: все данные на $DEVICE будут уничтожены."
+    printf 'Введите путь устройства для подтверждения (%s): ' "$DEVICE"
+    read -r answer
+    [ "$answer" = "$DEVICE" ] || die "подтверждение не совпало"
+fi
+
+if [ "$DRY_RUN" -eq 0 ]; then
+    read -r -s -p "Пароль для $USER_NAME: " USER_PASS; echo
+    read -r -s -p "Повторите пароль: " USER_PASS2; echo
+    [ -n "$USER_PASS" ] || die "пустой пароль недопустим"
+    [ "$USER_PASS" = "$USER_PASS2" ] || die "пароли не совпадают"
+fi
+
+# ---------- разметка ----------
+say "1/6: разметка"
+run sgdisk --zap-all "$DEVICE"
+run sgdisk -n 1:0:+1M   -t 1:ef02 -c 1:"BIOS boot" "$DEVICE"
+run sgdisk -n 2:0:+1G   -t 2:ef00 -c 2:"ESP" "$DEVICE"
+run sgdisk -n 3:0:0     -t 3:8300 -c 3:"$LABEL" "$DEVICE"
+run partprobe "$DEVICE"
+
+if [ "$DRY_RUN" -eq 1 ]; then
+    echo
+    echo "   [dry-run] далее было бы:"
+    echo "     mkfs.fat -F32 -n ESP $ESP_PART"
+    echo "     mkfs.ext4 -L $LABEL -F $ROOT_PART"
+    echo "     mount $ROOT_PART $TARGET; mount $ESP_PART $TARGET/boot"
+    echo "     pacstrap -K $TARGET <${#PKGS[@]} пакетов>"
+    echo "     перенос конфигов, fstab (только / и /boot), useradd -m -G wheel"
+    echo "     locale-gen, mkinitcpio -P, включение сервисов"
+    echo "     загрузчик: $BOOTLOADER (переносимый режим)"
+    exit 0
+fi
+sleep 2
+
+run mkfs.fat -F32 -n ESP "$ESP_PART"
+run mkfs.ext4 -L "$LABEL" -F "$ROOT_PART"
+
+# ---------- монтирование ----------
+say "2/6: монтирование"
+mkdir -p "$TARGET"
+if mountpoint -q "$TARGET"; then
+    die "$TARGET уже смонтирован"
+fi
+run mount "$ROOT_PART" "$TARGET"
+mkdir -p "$TARGET/boot"
+run mount "$ESP_PART" "$TARGET/boot"
+
+# ---------- пакеты ----------
+say "3/6: установка пакетов (${#PKGS[@]} шт., это долго)"
+run pacstrap -K "$TARGET" "${PKGS[@]}"
+
+# ---------- конфигурация ----------
+say "4/6: конфигурация DoubleColor OS"
+copy_file() {
+    [ -f "$1" ] || die "на Live нет файла $1"
+    install -Dm644 "$1" "$TARGET$2"
+    echo "   $2"
+}
+copy_file /etc/pacman.conf                          /etc/pacman.conf
+copy_file /etc/locale.gen                           /etc/locale.gen
+copy_file /etc/locale.conf                          /etc/locale.conf
+copy_file /etc/vconsole.conf                        /etc/vconsole.conf
+copy_file /etc/hostname                             /etc/hostname
+copy_file /etc/hosts                                /etc/hosts
+copy_file /etc/sysctl.d/99-work.conf                /etc/sysctl.d/99-work.conf
+copy_file /etc/systemd/journald.conf.d/99-work.conf /etc/systemd/journald.conf.d/99-work.conf
+copy_file /etc/systemd/zram-generator.conf          /etc/systemd/zram-generator.conf
+copy_file "$PORTABLE_CONF"                          /etc/mkinitcpio.conf
+
+echo "   /etc/skel"
+cp -a /etc/skel/. "$TARGET/etc/skel/"
+
+echo "   /etc/sudoers.d/10-wheel"
+install -d -m 750 "$TARGET/etc/sudoers.d"
+printf '%%wheel ALL=(ALL:ALL) ALL\n' > "$TARGET/etc/sudoers.d/10-wheel"
+chmod 440 "$TARGET/etc/sudoers.d/10-wheel"
+
+# ---------- fstab и пользователь ----------
+say "5/6: fstab и пользователь"
+genfstab -U "$TARGET" | awk '
+    /^#/ { print; next }
+    NF >= 2 && ($2 == "/" || $2 == "/boot") { print }
+' > "$TARGET/etc/fstab"
+echo "   /etc/fstab: только / и /boot"
+grep -E '^[^#]' "$TARGET/etc/fstab" | awk '{ printf "     %-20s %s\n", $2, $1 }' || true
+
+arch-chroot "$TARGET" useradd -m -G wheel -s /bin/bash "$USER_NAME"
+printf '%s:%s\n' "$USER_NAME" "$USER_PASS" | chpasswd --root "$TARGET"
+echo "   пользователь $USER_NAME добавлен в wheel"
+
+# ---------- chroot ----------
+say "6/6: initramfs, сервисы, загрузчик"
+arch-chroot "$TARGET" ln -sf "/usr/share/zoneinfo/UTC" /etc/localtime
+arch-chroot "$TARGET" locale-gen
+arch-chroot "$TARGET" mkinitcpio -P
+arch-chroot "$TARGET" /bin/bash -c '
+for unit in NetworkManager.service bluetooth.service cups.socket \
+            avahi-daemon.service pcscd.socket systemd-timesyncd.service \
+            fstrim.timer paccache.timer; do
+    systemctl enable "$unit" 2>/dev/null || echo "   пропущено: $unit"
+done
+systemctl daemon-reload
+'
+
+write_sdboot_entries() {
+    local uuid="$1"
+    mkdir -p "$TARGET/boot/loader/entries"
+    cat > "$TARGET/boot/loader/loader.conf" <<'EOF'
+default doublecolor.conf
+timeout 3
+editor 0
+EOF
+    cat > "$TARGET/boot/loader/entries/doublecolor.conf" <<EOF
+title   DoubleColor OS
+linux   /vmlinuz-linux-zen
+initrd  /intel-ucode.img
+initrd  /amd-ucode.img
+initrd  /initramfs-linux-zen.img
+options root=UUID=$uuid rw quiet zswap.enabled=0 nowatchdog
+EOF
+    echo "   /boot/loader/entries/doublecolor.conf"
+}
+
+if [ "$BOOTLOADER" = "grub" ]; then
+    arch-chroot "$TARGET" grub-install --target=x86_64-efi \
+        --efi-directory=/boot --bootloader-id=DoubleColor --removable
+    arch-chroot "$TARGET" grub-install --target=i386-pc "$DEVICE"
+    arch-chroot "$TARGET" grub-mkconfig -o /boot/grub/grub.cfg
+    echo "   GRUB: EFI (--removable) + BIOS"
+else
+    arch-chroot "$TARGET" bootctl --esp-path=/boot install --no-variables
+    root_uuid="$(blkid -s UUID -o value "$ROOT_PART")"
+    [ -n "$root_uuid" ] || die "не удалось определить UUID $ROOT_PART"
+    write_sdboot_entries "$root_uuid"
+    echo "   systemd-boot (--no-variables)"
+fi
+
+sync
+say "Готово"
+trap - EXIT
+umount -R "$TARGET"
+
+cat <<EOF
+
+DoubleColor OS установлена на $DEVICE.
+
+Что дальше:
+  * выключите машину и загрузитесь с этого носителя;
+  * вход на tty1 поднимает i3 автоматически;
+  * Super+N — окно «Диски», Ctrl+Shift+Tab — монитор нагрузки;
+  * часы и часовой пояс: sudo timedatectl set-timezone Europe/Yekaterinburg.
+
+Перенос на внутренний диск — раздел README «Перенос на внутренний диск»:
+  dd/Clonezilla + chroot либо tar-подход (System Tar & Restore).
+EOF
