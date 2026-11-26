@@ -17,6 +17,7 @@ reflector
 arch-install-scripts
 grub
 efibootmgr
+syslinux
 sudo
 nano
 less
