@@ -1,9 +1,9 @@
 # DoubleColor OS
 
-**Версия: x.0.02611.0**
+**Версия: x.0.02711.0**
 
-Рабочий дистрибутив на базе Arch Linux: i3wm на X11, ядро `linux-zen`, ZRAM вместо swap
-на диске, Wine для 32- и 64-битных Windows-приложений, монитор нагрузки по `Ctrl+Shift+Tab`.
+Рабочий дистрибутив на базе Arch Linux: KDE Plasma (Wayland) + SDDM, ядро `linux-zen`,
+ZRAM вместо swap на диске, Wine для 32- и 64-битных Windows-приложений, скрипт монитора нагрузки.
 
 Минимальные системные требования для работоспособности операционной системы: **2 ядра, 4 ГБ ОЗУ, от 20 ГБ свободного места на диске.**
 
@@ -17,15 +17,15 @@
 | Рабочая среда | KDE Plasma (Wayland) + SDDM | интерфейс как в Windows 10: панель, меню, виджеты, анимации |
 | Браузер | `chromium` + `install-chrome.sh` | Chrome ставится одной командой из AUR |
 | Сеть | NetworkManager + `plasma-nm`, `bluedevil` | Wi-Fi, Ethernet, Bluetooth в трее |
-| Перо | `libwacom` + модуль Plasma | настройка пера и планшета в параметрах системы |
+| Перо | `libwacom` + `kcm_tablet` (`plasma-desktop`) | настройка пера и планшета в параметрах системы |
 | Память | `zram-generator`, `zram-size = ram` | при 4 ГБ это не ускорение, а необходимость |
 | SSD | `fstrim.timer` | еженедельный TRIM |
 | Windows-софт | `wine` + `wine-mono` + `winetricks` | x64 и x86 через new WoW64 |
-| Мониторинг | `btop` по `Ctrl+Shift+Tab` | плавающее окно 1000×700 |
+| Мониторинг | `btop` (`~/.local/bin/sysmon.sh`) | окно 1000×700 из терминала |
 | Журнал | 100 МБ максимум | не раздувается на маленьком диске |
 
-Ядро `linux-zen`, `i3`, `dmenu`, `picom`, `alacritty`, `pipewire`, `libreoffice-fresh`,
-`firefox`, `zathura`, `cups`, `sane`, `remmina`, `keepassxc`, `archinstall` на Live.
+Ядро `linux-zen`, `plasma-desktop`, `konsole`, `pipewire`, `libreoffice-fresh`,
+`chromium`, `zathura`, `cups`, `sane`, `remmina`, `keepassxc`, `archinstall` на Live.
 
 ---
 
@@ -53,7 +53,7 @@ doublecolor-os/
     │   ├── systemd/zram-generator.conf
     │   ├── systemd/journald.conf.d/99-work.conf
     │   ├── systemd/system/…   # автологин root на tty1 (Live)
-    │   └── skel/              # i3, i3status, picom, «Диски», Wine, .bash_profile
+    │   └── skel/              # Plasma-конфиги, «Диски», Wine, .bash_profile
     ├── root/                  # заполняется prepare.sh копией skel
     └── usr/
         ├── local/bin/
@@ -140,7 +140,7 @@ Workflow лежит в `.github/workflows/build-iso.yml`, запускается
 ### Переменные окружения
 
 ```bash
-SESSION=i3 ./build.sh        # сейчас поддерживается только i3
+SESSION=plasma ./build.sh    # plasma (по умолчанию) или i3 — список пакетов один
 ```
 
 ---
@@ -148,11 +148,11 @@ SESSION=i3 ./build.sh        # сейчас поддерживается тол�
 ## Тестирование
 
 ```bash
-./test-qemu.sh              # UEFI, 2 vCPU, 4 ГБ, диск 20 ГБ
+./test-qemu.sh              # UEFI, 2 vCPU, 4 ГБ, от 20 ГБ свободного пространства
 ./test-qemu.sh --bios       # BIOS/SeaBIOS
 ```
 
-Учётная запись Live: **root без пароля**, автологин на tty1, сразу `startx` → i3.
+Учётная запись Live: **root без пароля**, автологин SDDM → Plasma (Wayland).
 
 Чек-лист приёмки:
 
@@ -162,7 +162,7 @@ zramctl                                  # zram0, zstd
 swapon --show                            # только /dev/zram0
 systemctl status fstrim.timer
 sudo fstrim -av
-btop                                     # и Ctrl+Shift+Tab
+btop                                     # и ~/.local/bin/sysmon.sh
 vulkaninfo --summary
 pacman -Sl multilib | head -3
 ```
@@ -182,14 +182,14 @@ sudo doublecolor-install
 Что происходит:
 
 1. запускается `archinstall` (ядро **`linux-zen`**, профиль minimal, без рабочего стола);
-2. в целевую систему переносится всё, что живёт только на Live: `/etc/skel` (i3,
-   окно «Диски», монитор нагрузки, скрипты Wine), ZRAM, `sysctl`, лимит журнала,
+2. в целевую систему переносится всё, что живёт только на Live: `/etc/skel`
+   (окно «Диски», монитор нагрузки, скрипты Wine), ZRAM, `sysctl`, лимит журнала,
    локали, `pacman.conf` с `multilib`;
-3. доустанавливается рабочий набор пакетов (i3, Wine, LibreOffice, печать, проводник);
+3. доустанавливается рабочий набор пакетов (Plasma, Wine, LibreOffice, печать, проводник);
 4. включаются сервисы, генерируются локали, обновляется загрузчик.
 
 **Почему это отдельный шаг.** `archinstall` ставит *стандартный* `/etc/skel` от Arch
-и не знает про наши конфиги — без переноса после установки не было бы ни i3, ни
+и не знает про наши конфиги — без переноса после установки не было бы ни Plasma, ни
 `drives.py`, ни ZRAM. Скрипт закрывает ровно этот разрыв.
 
 Рекомендуемые ответы в `archinstall`: ядро `linux-zen`, профиль minimal, ФС `ext4`,
@@ -255,7 +255,7 @@ Windows 10 вариант из коробки: нижняя панель, мен
 | Виджеты | `plasma-systemmonitor`, заметки, погода (`kdeplasma-addons`) |
 | Настройки | «Параметры системы» — единое окно, как в Windows |
 | Файлы | Dolphin, все диски в боковой панели |
-| Перо | «Параметры системы → Графический планшет» (`kcm_tablet` из `plasma-desktop`) |
+| Перо | «Параметры системы → Графический планшет» (`kcm_tablet`) |
 
 **Анимации** включены по умолчанию и настраиваются в «Параметры системы →
 Рабочая область → Эффекты». На слабом железе отключаются одним переключателем.
@@ -263,7 +263,7 @@ Windows 10 вариант из коробки: нижняя панель, мен
 **Память.** Переход с i3 на Plasma — сознательный компромисс: простой системы
 вырастает с 350–500 МБ до 700–900 МБ. Интерфейс был главным условием, поэтому
 выбран Plasma; при 4 ГБ ОЗУ браузер с десятком вкладок потребует ZRAM. Для 2 ГБ
-по-прежнему разумнее i3-профиль.
+разумнее лёгкий WM, но такого профиля здесь нет.
 
 **Сети.** Wi-Fi и Ethernet — NetworkManager с апплетом в трее (`plasma-nm`),
 подключение в два клика. Bluetooth — `bluedevil`: сопряжение, гарнитура, мышь.
@@ -313,12 +313,12 @@ sudo doublecolor-portable --device=/dev/sdX --dry-run
 sudo doublecolor-portable --device=/dev/sdX --bootloader=grub
 ```
 
-Разметка: GPT, 1 МиБ BIOS boot, 1 ГиБ ESP (FAT32), остальное — ext4 с меткой
-`DOUBLECOLOR`. Требуется не меньше 8 ГБ; комфортно — 16 ГБ и больше.
+Разметка: GPT, 1 МиБ BIOS boot, 1 ГиБ ESP (FAT32), 32 ГиБ ext4 с меткой
+`DOUBLECOLOR` и раздел `DATA` (exFAT), который виден в Windows. Требуется не меньше 24 ГБ.
 
 Защита встроена: скрипт отказывается работать, если указан носитель, с которого
 загружен Live-образ, если на устройстве есть смонтированные разделы или активный
-swap, если места меньше 8 ГБ. Перед разметкой нужно ввести путь устройства целиком.
+swap, если места меньше 24 ГБ. Перед разметкой нужно ввести путь устройства целиком.
 
 ### Загрузчик: GRUB или systemd-boot
 
@@ -423,15 +423,12 @@ sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 ---
 
-## Ctrl+Shift+Tab
+## Монитор нагрузки
 
-`~/.local/bin/sysmon.sh` открывает `btop` в `alacritty` с классом `Sysmon`.
-Правило i3 делает окно плавающим 1000×700 по центру:
+`~/.local/bin/sysmon.sh` открывает `btop` в `konsole`.
 
-```i3
-bindsym Ctrl+Shift+Tab exec --no-startup-id $HOME/.local/bin/sysmon.sh
-for_window [class="(?i)sysmon"] floating enable, resize set 1000 700, move position center
-```
+В Plasma глобальная комбинация для него не назначена: запускайте скрипт из
+терминала или назначайте клавишу в «Параметры системы → Комбинации клавиш».
 
 Показывает CPU по ядрам, ОЗУ, ZRAM, диски с `%avail`, сеть, температуры.
 
@@ -440,7 +437,7 @@ for_window [class="(?i)sysmon"] floating enable, resize set 1000 700, move posit
 ## Диски и буквы A:/C:
 
 В Linux букв дисков нет: есть `/dev/nvme0n1p2` и монтирование по UUID. Но в окне
-проводника **«Диски»** (`Super+N`) сделана привычная нумерация:
+проводника **«Диски»** (`~/.local/bin/drives.py`) сделана привычная нумерация:
 
 | Диск | Буква |
 |---|---|
@@ -511,11 +508,11 @@ sudo pacman -S lib32-glibc lib32-libgcc lib32-vulkan-icd-loader lib32-mesa
 
 | Что | Объём |
 |---|---|
-| ISO | ~2.2–2.8 ГБ |
+| ISO | ~3.1 ГБ |
 | Установленная система | 7–9 ГБ |
 | Свободно на 20 ГБ | 11–13 ГБ под данные и игры |
-| ОЗУ в простое (i3) | 350–500 МБ |
-| ОЗУ с Firefox + 5 вкладок | 2.2–2.8 ГБ |
+| ОЗУ в простое (Plasma) | 700–900 МБ |
+| ОЗУ с Chromium + 5 вкладок | 2.2–2.8 ГБ |
 
 `linux-firmware` — мета-пакет (~1.5 ГБ). Если нужен запас, замените его в
 `packages.x86_64` на подпакеты под ваше железо (`linux-firmware-amdgpu`,
@@ -531,8 +528,8 @@ sudo pacman -S lib32-glibc lib32-libgcc lib32-vulkan-icd-loader lib32-mesa
 | `No space left on device` в work | work-каталог на tmpfs: `-w /var/tmp/archiso-work` |
 | Загрузка: `archisolabel=DOUBLECOLOR not found` | метка не совпала; `./prepare.sh` проверяет это автоматически |
 | Чёрный экран после выбора пункта | пункт «без KMS», либо `nomodeset` вручную |
-| `startx` не стартует | `cat ~/.local/share/doublecolor-startx.log` |
-| Нет `Ctrl+Shift+Tab` | `which btop alacritty`; правило i3 требует класс `Sysmon` |
+| SDDM не стартует | `systemctl status sddm`; `journalctl -b -u sddm` |
+| `sysmon.sh` не открывается | `which btop konsole` — скрипт берёт первый доступный терминал |
 | Медленно всё на eMMC | ожидаемо; проверьте `sudo fstrim -av` |
 | `failed to mount /dev/zram0` | `systemctl start systemd-zram-setup@zram0.service` |
 
@@ -540,11 +537,11 @@ sudo pacman -S lib32-glibc lib32-libgcc lib32-vulkan-icd-loader lib32-mesa
 
 ---
 
-## Ограничение этого репозитория
+## Сборка и проверка
 
-Профиль написан и проверен на согласованность (метка ISO ↔ boot-конфиги, имена ядер
-`linux-zen`, наличие всех файлов), но **ISO здесь не скомпилирован**: `mkarchiso` требует
-Arch Linux с root и доступом к `loop`-устройствам. Первая сборка на Arch-хосте — это и есть
-финальная проверка; при расхождении с вашей версией `archiso` ориентируйтесь на
-`/usr/share/archiso/configs/releng/` как на эталон (в частности, `mkinitcpio.conf.d/archiso.conf`,
-который `prepare.sh` подтягивает из releng автоматически).
+Профиль проверен на согласованность (метка ISO ↔ boot-конфиги, имена ядер `linux-zen`,
+наличие файлов и пакетов в репозиториях Arch). ISO собирается через `./build.sh` на
+Arch-хосте или в GitHub Actions (`.github/workflows/build-iso.yml`); готовый образ
+проверяется по SHA256 из `SHA256SUMS`. При расхождении с версией `archiso` ориентируйтесь
+на `/usr/share/archiso/configs/releng/` как на эталон (в частности,
+`mkinitcpio.conf.d/archiso.conf`, который `prepare.sh` подтягивает из releng автоматически).

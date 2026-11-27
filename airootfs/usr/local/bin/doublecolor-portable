@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# doublecolor-portable - ustanovka DoubleColor OS na USB-nositel / vneshnij disk
-# Sistema stavitsya celikom (ne Live): dannye sohranyayutsya mezhdu zagruzkami.
+# doublecolor-portable - установка DoubleColor OS на USB-накопитель / внешний диск
+# ОС ставится целиком (не Live): данные сохранятся между загрузками.
 set -euo pipefail
 
 DEVICE=""
@@ -48,7 +48,9 @@ usage() {
   --yes                             не требовать подтверждения устройства
   -h, --help                        эта справка
 
-Разметка: GPT, 1 МиБ BIOS boot, 1 ГиБ ESP (FAT32), остальное — ext4.
+Разметка: GPT, 1 МиБ BIOS boot, 1 ГиБ ESP (FAT32), 32 ГиБ ext4 (система),
+остальное — DATA (exFAT). Раздел DATA виден в Windows, система — нет.
+Требуется не меньше 24 ГБ: Plasma, офис и Wine занимают 7–9 ГБ.
 Загрузчик ставится переносимо: GRUB --removable, systemd-boot --no-variables,
 поэтому носитель грузится на разных компьютерах без записи в NVRAM.
 EOF
@@ -87,7 +89,7 @@ esac
 [ -f "$PACKAGES_FILE" ] || die "нет $PACKAGES_FILE"
 [ -f "$PORTABLE_CONF" ] || die "нет $PORTABLE_CONF"
 
-for bin in pacstrap genfstab sgdisk mkfs.fat mkfs.ext4 blkid partprobe arch-chroot; do
+for bin in pacstrap genfstab sgdisk mkfs.fat mkfs.ext4 mkfs.exfat blkid partprobe arch-chroot; do
     command -v "$bin" >/dev/null 2>&1 || \
         die "нет $bin — проверьте arch-install-scripts, gptfdisk, dosfstools, e2fsprogs"
 done
@@ -111,10 +113,19 @@ fi
 
 size_bytes="$(lsblk -bno SIZE "$DEVICE" | head -n1)"
 size_gib=$(( size_bytes / 1024 / 1024 / 1024 ))
-[ "$size_gib" -ge 8 ] || die "нужно не меньше 8 ГБ, на $DEVICE — ${size_gib} ГБ"
+[ "$size_gib" -ge 24 ] || die "нужно не меньше 24 ГБ (Plasma + офис + Wine занимают 7–9 ГБ), на $DEVICE — ${size_gib} ГБ"
+
+# Системе — 32 ГиБ, остальное уходит в DATA (exFAT), чтобы карта была видна в Windows.
+if [ "$size_gib" -ge 64 ]; then
+    ROOT_GIB=32
+else
+    ROOT_GIB=$(( size_gib - 8 ))
+fi
+[ "$ROOT_GIB" -ge 12 ] || die "слишком маленький носитель: корню нужно минимум 12 ГБ"
 
 ROOT_PART="$(part "$DEVICE" 3)"
 ESP_PART="$(part "$DEVICE" 2)"
+DATA_PART="$(part "$DEVICE" 4)"
 
 # ---------- список пакетов ----------
 PKGS=()
@@ -132,7 +143,7 @@ done < "$PACKAGES_FILE"
 # ---------- план ----------
 say "План установки"
 printf '  носитель    : %s (%s ГБ)\n' "$DEVICE" "$size_gib"
-printf '  разделы     : GPT: 1M BIOS boot, 1G ESP, остальное %s\n' "$LABEL"
+printf '  разделы     : GPT: 1M BIOS boot, 1G ESP, %sG %s, остальное DATA (exFAT)\n' "$ROOT_GIB" "$LABEL"
 printf '  корень      : %s\n' "$ROOT_PART"
 printf '  ESP         : %s\n' "$ESP_PART"
 printf '  загрузчик   : %s\n' "$BOOTLOADER"
@@ -160,7 +171,8 @@ say "1/6: разметка"
 run sgdisk --zap-all "$DEVICE"
 run sgdisk -n 1:0:+1M   -t 1:ef02 -c 1:"BIOS boot" "$DEVICE"
 run sgdisk -n 2:0:+1G   -t 2:ef00 -c 2:"ESP" "$DEVICE"
-run sgdisk -n 3:0:0     -t 3:8300 -c 3:"$LABEL" "$DEVICE"
+run sgdisk -n 3:0:+${ROOT_GIB}G -t 3:8300 -c 3:"$LABEL" "$DEVICE"
+run sgdisk -n 4:0:0     -t 4:0700 -c 4:"DATA" "$DEVICE"
 run partprobe "$DEVICE"
 
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -168,6 +180,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "   [dry-run] далее было бы:"
     echo "     mkfs.fat -F32 -n ESP $ESP_PART"
     echo "     mkfs.ext4 -L $LABEL -F $ROOT_PART"
+    echo "     mkfs.exfat -n DATA $DATA_PART"
     echo "     mount $ROOT_PART $TARGET; mount $ESP_PART $TARGET/boot"
     echo "     pacstrap -K $TARGET <${#PKGS[@]} пакетов>"
     echo "     перенос конфигов, fstab (только / и /boot), useradd -m -G wheel"
@@ -179,6 +192,7 @@ sleep 2
 
 run mkfs.fat -F32 -n ESP "$ESP_PART"
 run mkfs.ext4 -L "$LABEL" -F "$ROOT_PART"
+run mkfs.exfat -n DATA "$DATA_PART"
 
 # ---------- монтирование ----------
 say "2/6: монтирование"
@@ -241,9 +255,11 @@ arch-chroot "$TARGET" mkinitcpio -P
 arch-chroot "$TARGET" /bin/bash -c '
 for unit in NetworkManager.service bluetooth.service cups.socket \
             avahi-daemon.service pcscd.socket systemd-timesyncd.service \
+            power-profiles-daemon.service sddm.service \
             fstrim.timer paccache.timer; do
     systemctl enable "$unit" 2>/dev/null || echo "   пропущено: $unit"
 done
+systemctl set-default graphical.target
 systemctl daemon-reload
 '
 
@@ -291,8 +307,9 @@ DoubleColor OS установлена на $DEVICE.
 
 Что дальше:
   * выключите машину и загрузитесь с этого носителя;
-  * вход на tty1 поднимает i3 автоматически;
-  * Super+N — окно «Диски», Ctrl+Shift+Tab — монитор нагрузки;
+  * вход через SDDM, сессия Plasma (Wayland);
+  * окно «Диски»: ~/.local/bin/drives.py; монитор: ~/.local/bin/sysmon.sh;
+  * раздел DATA (exFAT) виден в Windows — для обмена файлами;
   * часы и часовой пояс: sudo timedatectl set-timezone Europe/Yekaterinburg.
 
 Перенос на внутренний диск — раздел README «Перенос на внутренний диск»:

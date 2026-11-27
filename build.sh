@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# build.sh - polnyj cikl: prepare.sh + mkarchiso
-# Zapusk: ./build.sh   (parol sudo sprosit odin raz)
+# build.sh - полный цикл: prepare.sh + mkarchiso
+# Старт: ./build.sh   (пароль sudo необходимо ввести только один раз)
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

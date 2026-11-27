@@ -1,7 +1,7 @@
-# DoubleColor: rabochaya sistema. Spisok paketov dlya mkarchiso.
-# Kommentarii vyrezayutsya prepare.sh pered sborkoy.
+# DoubleColor: Рабочая система. Список пакетов для mkarchiso.
+# Комментарии вырезаются скриптом prepare.sh перед сборкой.
 
-# --- baza ---
+# --- База данных ---
 base
 linux-zen
 linux-firmware
@@ -17,6 +17,7 @@ reflector
 arch-install-scripts
 grub
 efibootmgr
+# syslinux обязателен: mkarchiso берёт из него isolinux.bin и *.c32 для bios.syslinux
 syslinux
 sudo
 nano
@@ -32,7 +33,7 @@ curl
 wget
 jq
 
-# --- ustanovka i diski (nuzhno na Live) ---
+# --- Установка и диски (необходимо для работоспособности Live) ---
 archinstall
 gptfdisk
 parted
@@ -44,7 +45,7 @@ util-linux
 pciutils
 usbutils
 
-# --- set i bluetooth ---
+# --- Сеть и Интернет ---
 networkmanager
 network-manager-applet
 wpa_supplicant
@@ -53,10 +54,10 @@ bluez-utils
 avahi
 nss-mdns
 
-# --- pamjat: ZRAM vmesto swap na diske ---
+# --- Память: ZRAM вместо swap на диске ---
 zram-generator
 
-# --- grafika: Mesa / Vulkan / VA-API ---
+# --- Настройки графики: Mesa / Vulkan / VA-API ---
 mesa
 vulkan-icd-loader
 vulkan-radeon
@@ -104,7 +105,7 @@ polkit
 xdg-utils
 xdg-user-dirs
 
-# --- zvuk ---
+# --- Аудио ---
 pipewire
 pipewire-pulse
 pipewire-alsa
@@ -113,7 +114,7 @@ pavucontrol
 playerctl
 alsa-utils
 
-# --- shrifty ---
+# --- Шрифты ---
 noto-fonts
 noto-fonts-emoji
 noto-fonts-cjk
@@ -121,7 +122,7 @@ ttf-liberation
 ttf-dejavu
 terminus-font
 
-# --- pechat i skanirovanie ---
+# --- Печать и скан ---
 cups
 cups-pdf
 cups-filters
@@ -133,7 +134,7 @@ ghostscript
 pcsclite
 ccid
 
-# --- ofis i brauzer ---
+# --- Офис и браузер ---
 libreoffice-fresh
 zathura
 zathura-pdf-mupdf
@@ -141,11 +142,11 @@ poppler
 chromium
 keepassxc
 
-# --- udalennyj dostup ---
+# --- Удаленный доступ к ПК ---
 freerdp
 remmina
 
-# --- Wine: x86 i x64 Windows-prilozhenija ---
+# --- Wine: x86/x64 Windows-программы ---
 wine
 wine-mono
 wine-gecko
@@ -153,21 +154,21 @@ winetricks
 cabextract
 vkd3d
 
-# --- diagnostika i monitoring (Ctrl+Shift+Tab) ---
+# --- Диагностика задач и мониторинг загрузки (Ctrl+Shift+Tab) ---
 btop
 lm_sensors
 ncdu
 fastfetch
-p7zip
+7zip
 unzip
 zip
 
-# --- sbor hintov iz AUR (yay) ---
+# --- Сборка хинтов из AUR (yay) ---
 base-devel
 python
 
-# --- NE vklyucheno po umolchaniju ---
+# --- По умолчанию отключено ---
 # nvidia: nvidia-open-dkms linux-zen-headers nvidia-utils nvidia-settings
-# igry:  steam mangohud gamemode lib32-gamemode
-# 32-bit podderzhka pri starej sborke wine: lib32-glibc lib32-libgcc lib32-vulkan-icd-loader
-# Wayland-variant: hyprland xdg-desktop-portal-hyprland waybar fuzzel foot
+# Игры:  steam mangohud gamemode lib32-gamemode
+# 32-bit поддержка при старой сборке wine: lib32-glibc lib32-libgcc lib32-vulkan-icd-loader
+# Wayland-вариант: hyprland xdg-desktop-portal-hyprland waybar fuzzel foot

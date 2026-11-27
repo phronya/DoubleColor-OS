@@ -4,8 +4,8 @@
 iso_name="doublecoloros"
 iso_label="DOUBLECOLOR"
 iso_publisher="DoubleColor <https://example.org/doublecolor>"
-iso_application="DoubleColor OS x.0.02611.0 Live - rabochaya sistema na baze Arch Linux"
-iso_version="x.0.02611.0"
+iso_application="DoubleColor OS x.0.02711.0 Live - рабочая ОС на базе Arch Linux"
+iso_version="x.0.02711.0"
 install_dir="arch"
 buildmodes=('iso')
 bootmodes=('bios.syslinux' 'uefi.systemd-boot')

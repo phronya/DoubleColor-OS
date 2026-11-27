@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# doublecolor-install - ustanovka DoubleColor OS na disk
-# Zapuskaetsya s Live-obraza: sudo doublecolor-install
+# doublecolor-install - установка DoubleColor OS на диск
+# Запускается с Live-образа: sudo doublecolor-install
 set -euo pipefail
 
 TARGET="/mnt"
@@ -9,7 +9,7 @@ PACKAGES_FILE="/usr/share/doublecolor/packages.txt"
 LIVE_ONLY="mkinitcpio-archiso archiso squashfs-tools archinstall"
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
-die() { echo "ОШИБКА: $*" >&2; exit 1; }
+die() { echo "ПРОИЗОШЛА ОШИБКА: $*" >&2; exit 1; }
 
 usage() {
     cat <<'EOF'
@@ -23,7 +23,7 @@ usage() {
   1. запускает archinstall (ядро linux-zen, профиль minimal, ext4, без swap);
   2. переносит конфигурацию DoubleColor: /etc/skel, ZRAM, sysctl, журнал, локали,
      pacman.conf с multilib;
-  3. ставит в целевую систему рабочий набор пакетов (i3, Wine, офис, печать);
+  3. ставит в целевую систему рабочий набор пакетов (Plasma, Wine, офис, печать);
   4. включает сервисы, генерирует локали, обновляет загрузчик.
 EOF
 }
@@ -128,16 +128,18 @@ done < "$PACKAGES_FILE"
 [ "${#PKGS[@]}" -gt 0 ] || die "список пакетов пуст"
 
 say "Шаг 3 из 4: установка окружения (${#PKGS[@]} пакетов, ~7 ГБ)"
-arch-chroot "$TARGET" pacman -S --needed --noconfirm "${PKGS[@]}"
+arch-chroot "$TARGET" pacman -Syu --needed --noconfirm "${PKGS[@]}"
 
 # ---------- шаг 4: сервисы, локали, загрузчик ----------
 say "Шаг 4 из 4: сервисы и локали"
 arch-chroot "$TARGET" /bin/bash -c '
 for unit in NetworkManager.service bluetooth.service cups.socket \
             avahi-daemon.service pcscd.socket systemd-timesyncd.service \
+            power-profiles-daemon.service sddm.service \
             fstrim.timer paccache.timer; do
     systemctl enable "$unit" 2>/dev/null || echo "   пропущено: $unit"
 done
+systemctl set-default graphical.target
 systemctl daemon-reload
 locale-gen
 paccache -r 2>/dev/null || true
@@ -166,11 +168,12 @@ cat <<EOF
 DoubleColor OS установлена в $TARGET.
 
 Первый запуск:
-  * вход на tty1 автоматически поднимает i3;
-  * Super+N — окно «Диски», Ctrl+Shift+Tab — монитор нагрузки;
-  * yay:    ~/.local/bin/install-yay.sh
-  * Wine:   ~/.local/bin/wine-bootstrap.sh win64
-  * NVIDIA: pacman -S nvidia-open-dkms linux-zen-headers
+  * SDDM, сессия Plasma (Wayland) — включаются автоматически;
+  * окно «Диски»:   ~/.local/bin/drives.py
+  * монитор:        ~/.local/bin/sysmon.sh (btop)
+  * yay:            ~/.local/bin/install-yay.sh
+  * Wine:           ~/.local/bin/wine-bootstrap.sh win64
+  * NVIDIA:         pacman -S nvidia-open-dkms linux-zen-headers
 
 Не забудьте отмонтировать целевые разделы перед перезагрузкой:
   umount -R $TARGET && reboot

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# docker-build.sh - sborka ISO v kontejnere archlinux (put dlya Windows/macOS)
-# Trebuet Docker Desktop ili Docker Engine s --privileged.
+# docker-build.sh - сборка образа ISO в контейнере archlinux (Windows/macOS)
+# Требует наличие Docker Desktop или Docker Engine s --privileged.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

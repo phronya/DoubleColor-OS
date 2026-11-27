@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# prepare.sh - gotovit chistuyu kopiyu profilya dlya mkarchiso.
-# Istochnik ostayotsya chistym (udobno dlya git), sborka idyot v build/profile.
+# prepare.sh - готовит чистую копию профиля для mkarchiso.
+# Источник остается чистым (удобно для git), сборка осуществляется внутри профиля.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-session="${SESSION:-i3}"
+session="${SESSION:-plasma}"
 profile="$here/build/profile"
 
 info() { echo "==> $*"; }
@@ -14,8 +14,8 @@ command -v mkarchiso >/dev/null 2>&1 || \
     die "нет mkarchiso. Установите: sudo pacman -S archiso"
 
 case "$session" in
-    i3) pkgs="$here/packages.x86_64" ;;
-    *)  die "неизвестный SESSION='$session' (доступно: i3)" ;;
+    plasma|i3) pkgs="$here/packages.x86_64" ;;
+    *)  die "неизвестный SESSION='$session' (доступно: plasma, i3)" ;;
 esac
 
 [ -f "$pkgs" ] || die "не найден список пакетов: $pkgs"

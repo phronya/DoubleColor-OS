@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# test-qemu.sh - zapusk sobrannego ISO v QEMU
-# Ispolzovanie: ./test-qemu.sh [--uefi|--bios] [put-k-iso]
+# test-qemu.sh - запуск собранного ISO внутри QEMU
+# Использование: ./test-qemu.sh [--uefi|--bios] [put-k-iso]
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,7 +12,7 @@ usage() {
 Использование: $0 [--uefi|--bios] [--gl] [путь-к-iso]
 
 Без аргументов берёт самый свежий ISO из build/out и грузит в UEFI.
-Параметры VM: 2 vCPU, 4 ГБ ОЗУ, диск 20 ГБ (build/test-disk.qcow2).
+Параметры VM: 2 vCPU, 4 ГБ ОЗУ, от 20 ГБ свободного пространства (build/test-disk.qcow2).
 --gl включает 3D-ускорение (virtio-vga-gl), без него — совместимый режим.
 EOF
 }
