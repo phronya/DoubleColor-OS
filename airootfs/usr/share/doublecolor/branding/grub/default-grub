@@ -1,11 +1,15 @@
 # Параметры GRUB для DoubleColor OS.
 # Применяется установщиком; после изменений: grub-mkconfig -o /boot/grub/grub.cfg
+#
+# amdgpu.dc=0 — обход чёрного экрана на AMD Raven Ridge (Vega 8).
+# На других видеокартах параметр игнорируется.
+# systemd.firstboot=0 — без мастера «Initial Setup» при первом запуске.
 
 GRUB_DEFAULT=0
 GRUB_TIMEOUT=5
 GRUB_TIMEOUT_STYLE=menu
 GRUB_DISTRIBUTOR="DoubleColor OS"
-GRUB_CMDLINE_LINUX_DEFAULT="quiet splash vt.global_cursor_default=0 zswap.enabled=0 nowatchdog"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash vt.global_cursor_default=0 amdgpu.dc=0 systemd.firstboot=0 zswap.enabled=0 nowatchdog"
 GRUB_CMDLINE_LINUX=""
 GRUB_THEME="/boot/grub/themes/doublecolor/theme.txt"
 GRUB_GFXMODE=auto
