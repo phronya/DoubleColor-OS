@@ -118,20 +118,22 @@ grub_cfg="$profile/grub/grub.cfg"
 linux_lines="$(grep -cE '^[[:space:]]*linux ' "$grub_cfg" || true)"
 initrd_lines="$(grep -cE '^[[:space:]]*initrd ' "$grub_cfg" || true)"
 firstboot_lines="$(grep -c -- 'systemd.firstboot=0' "$grub_cfg" || true)"
-[ "$linux_lines" -ge 4 ] || die "в grub.cfg меньше четырёх пунктов загрузки (linux=$linux_lines)"
+[ "$linux_lines" -ge 5 ] || die "в grub.cfg меньше пяти пунктов загрузки (linux=$linux_lines)"
 [ "$linux_lines" -eq "$initrd_lines" ] || \
     die "в grub.cfg linux=$linux_lines, а initrd=$initrd_lines — пары не совпадают"
 [ "$firstboot_lines" -ge "$linux_lines" ] || \
     die "не во всех пунктах grub.cfg есть systemd.firstboot=0"
 grep -q -- 'amdgpu.dc=0' "$grub_cfg" || die "в grub.cfg нет amdgpu.dc=0"
 grep -q -- 'nomodeset' "$grub_cfg" || die "в grub.cfg нет безопасного пункта (nomodeset)"
+grep -m1 -E '^[[:space:]]*linux ' "$grub_cfg" | grep -q -- 'nomodeset' || \
+    die "первый пункт grub.cfg не гарантированный: в нём нет nomodeset"
 grep -q -- 'copytoram=y' "$grub_cfg" || die "в grub.cfg нет пункта с copytoram"
 for entry in "$profile/efiboot/loader/entries/"*.conf; do
     grep -qE '^initrd ' "$entry" || die "в $(basename "$entry") нет initrd"
     grep -q -- 'archisolabel=' "$entry" || die "в $(basename "$entry") нет archisolabel"
 done
 menu_labels="$(grep -cE '^LABEL ' "$profile/syslinux/syslinux.cfg" || true)"
-[ "$menu_labels" -ge 6 ] || die "в syslinux.cfg меньше шести пунктов (LABEL=$menu_labels)"
+[ "$menu_labels" -ge 7 ] || die "в syslinux.cfg меньше семи пунктов (LABEL=$menu_labels)"
 info "   grub: $linux_lines пунктов, syslinux: $menu_labels"
 
 info "проверяю обязательные файлы"

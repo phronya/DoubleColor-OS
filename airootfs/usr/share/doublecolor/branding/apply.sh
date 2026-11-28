@@ -62,4 +62,22 @@ if [ -f "$TARGET/etc/default/grub" ] || [ -d "$TARGET/boot/grub" ]; then
     say "/boot/grub/themes/doublecolor, /etc/default/grub"
 fi
 
+# --- запасной пункт «Безопасная графика» в меню установленной системы ------
+if [ -d "$TARGET/boot/grub" ] && [ -f "$TARGET/etc/grub.d/41_custom" ]; then
+    uuid="$(findmnt -no UUID "$TARGET" 2>/dev/null || true)"
+    kernel="$(ls "$TARGET"/boot/vmlinuz-* 2>/dev/null | head -n1 || true)"
+    if [ -n "$uuid" ] && [ -n "$kernel" ]; then
+        kernel="/${kernel##*/}"
+        initrd="${kernel/vmlinuz-/initramfs-}.img"
+        cat > "$TARGET/boot/grub/custom.cfg" <<CUSTOM
+menuentry "Безопасная графика (nomodeset)" --id doublecolor-safe {
+    search --no-floppy --set=root --file ${kernel}
+    linux ${kernel} root=UUID=${uuid} rw nomodeset nowatchdog
+    initrd ${initrd}
+}
+CUSTOM
+        say "/boot/grub/custom.cfg (пункт «Безопасная графика»)"
+    fi
+fi
+
 exit 0

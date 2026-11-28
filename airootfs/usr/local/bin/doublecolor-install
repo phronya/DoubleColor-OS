@@ -172,7 +172,11 @@ cat <<EOF
 DoubleColor OS установлена в $TARGET.
 
 Первый запуск:
-  * SDDM, сессия Plasma (Wayland) — включаются автоматически;
+  * SDDM, сессия Plasma (X11) — включаются автоматически;
+  * если при загрузке чёрный экран — в меню GRUB нажмите e, в строке
+    с linux допишите nomodeset и нажмите Ctrl+X; затем закрепите это
+    в /etc/default/grub (GRUB_CMDLINE_LINUX_DEFAULT) и выполните
+    grub-mkconfig -o /boot/grub/grub.cfg;
   * окно «Диски»:   ~/.local/bin/drives.py
   * монитор:        ~/.local/bin/sysmon.sh (btop)
   * yay:            ~/.local/bin/install-yay.sh

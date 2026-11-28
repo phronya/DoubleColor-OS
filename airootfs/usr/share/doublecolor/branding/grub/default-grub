@@ -4,6 +4,9 @@
 # amdgpu.dc=0 — обход чёрного экрана на AMD Raven Ridge (Vega 8).
 # На других видеокартах параметр игнорируется.
 # systemd.firstboot=0 — без мастера «Initial Setup» при первом запуске.
+# Если на этом компьютере всё равно чёрный экран: в меню GRUB нажать e,
+# дописать в строку linux nomodeset, Ctrl+X. Рабочая замена параметра —
+# amdgpu.dcdebugmask=0x10 (отключение PSR).
 
 GRUB_DEFAULT=0
 GRUB_TIMEOUT=5
