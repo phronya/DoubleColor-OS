@@ -34,6 +34,33 @@ for unit in plymouth-start.service plymouth-quit.service plymouth-quit-wait.serv
     ln -sfn /dev/null "/etc/systemd/system/$unit"
 done
 
+echo "==> звук: PipeWire для всех пользователей"
+# Без global-enable сокеты PipeWire не стартуют ни в Live, ни в установленной
+# системе: звука нет, хотя карта видна в aplay.
+systemctl --global enable pipewire.socket pipewire-pulse.socket wireplumber.service 2>/dev/null || true
+
+echo "==> заставка при выключении"
+# Plymouth на Live не запускается при загрузке (нет хука в initramfs), но режим
+# shutdown работает и без него: unit гасит консоль логотипом перед питанием.
+cat > /etc/systemd/system/doublecolor-shutdown-splash.service <<'SPLASH'
+[Unit]
+Description=Заставка DoubleColor при выключении
+DefaultDependencies=no
+Before=shutdown.target
+After=display-manager.service
+Conflicts=plymouth-poweroff.service plymouth-halt.service plymouth-reboot.service
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/plymouthd --mode=shutdown --attach-to-session
+ExecStartPost=-/usr/bin/plymouth show-splash
+RemainAfterExit=yes
+
+[Install]
+WantedBy=shutdown.target
+SPLASH
+systemctl enable doublecolor-shutdown-splash.service 2>/dev/null || true
+
 echo "==> окно «О системе»"
 install -Dm755 "$BRAND/about/doublecolor-about" /usr/local/bin/doublecolor-about
 install -Dm644 "$BRAND/about/doublecolor-about.desktop" \
