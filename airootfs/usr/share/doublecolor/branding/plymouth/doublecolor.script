@@ -1,6 +1,6 @@
 # DoubleColor OS — заставка загрузки и выключения.
-# Показывает логотип, индикатор работы и небольшое окно справа
-# с текущим сообщением системы (полный журнал — клавиша Esc).
+# Набор вызовов намеренно минимальный: только то, что точно поддерживается
+# скриптовым плагином Plymouth. Никаких обработчиков пароля и сообщений.
 
 Window.SetBackgroundTopColor(0.043, 0.063, 0.125);
 Window.SetBackgroundBottomColor(0.075, 0.145, 0.255);
@@ -36,7 +36,6 @@ fun refresh_callback ()
   {
     phase = phase + 0.08;
     if (phase > 6.283) phase = 0;
-
     dot1.sprite.SetOpacity(0.25 + 0.75 * (Math.Cos(phase) + 1) / 2);
     dot2.sprite.SetOpacity(0.25 + 0.75 * (Math.Cos(phase + 2.09) + 1) / 2);
     dot3.sprite.SetOpacity(0.25 + 0.75 * (Math.Cos(phase + 4.19) + 1) / 2);
@@ -52,19 +51,19 @@ bar_bg.sprite.SetPosition(screen_x + (screen_w - bar_bg.image.GetWidth()) / 2,
                           15);
 
 bar.original = Image("bar.png");
-bar.sprite = Sprite();
+bar.sprite = Sprite(bar.original);
 bar.sprite.SetPosition(screen_x + (screen_w - bar.original.GetWidth()) / 2,
                        screen_y + screen_h * 0.72,
                        16);
-bar.sprite.SetOpacity(0);
 
 fun progress_callback (duration, value)
   {
-    bar.sprite.SetOpacity(1);
     width = Math.Int(bar.original.GetWidth() * value);
-    if (width < 2) width = 2;
-    bar.image = bar.original.Scale(width, bar.original.GetHeight());
-    bar.sprite.SetImage(bar.image);
+    if (width > 2)
+      {
+        bar.image = bar.original.Scale(width, bar.original.GetHeight());
+        bar.sprite.SetImage(bar.image);
+      }
   }
 
 Plymouth.SetBootProgressFunction(progress_callback);
@@ -78,47 +77,16 @@ panel.sprite.SetPosition(panel.x, panel.y, 40);
 panel.sprite.SetOpacity(0.9);
 
 status.sprite = Sprite();
-status.sprite.SetOpacity(0.9);
+status.sprite.SetOpacity(0);
 
 fun set_status (text)
   {
     status.image = Image.Text(text, 0.82, 0.90, 1.0);
     status.sprite.SetImage(status.image);
+    status.sprite.SetOpacity(1);
     status.sprite.SetPosition(panel.x + 18,
                               panel.y + (panel.image.GetHeight() - status.image.GetHeight()) / 2,
                               41);
   }
 
 Plymouth.SetUpdateStatusFunction(set_status);
-
-# ---------- сообщения и пароль ----------
-message.sprite = Sprite();
-message.sprite.SetOpacity(0.9);
-
-fun display_message_callback (text)
-  {
-    message.image = Image.Text(text, 1.0, 0.80, 0.35);
-    message.sprite.SetImage(message.image);
-    message.sprite.SetPosition(screen_x + 36, screen_y + screen_h - 90, 40);
-  }
-
-fun hide_message_callback ()
-  {
-    message.sprite.SetImage();
-  }
-
-Plymouth.SetDisplayMessageFunction(display_message_callback);
-Plymouth.SetHideMessageFunction(hide_message_callback);
-
-fun display_password_callback (prompt, bullets)
-  {
-    set_status(prompt);
-  }
-
-fun display_normal_callback ()
-  {
-    set_status("");
-  }
-
-Plymouth.SetDisplayPasswordFunction(display_password_callback);
-Plymouth.SetDisplayNormalFunction(display_normal_callback);

@@ -75,51 +75,16 @@ theme_dir="$profile/grub/themes/doublecolor"
 mkdir -p "$theme_dir" "$profile/grub/fonts"
 cp -a "$brand_grub/." "$theme_dir/"
 
-find_font() {
-    local name="$1" dir found
-    for dir in /usr/share/fonts /usr/local/share/fonts "$HOME/.fonts"; do
-        [ -d "$dir" ] || continue
-        found="$(find "$dir" -type f -name "$name" 2>/dev/null | head -n1)"
-        if [ -n "$found" ]; then
-            printf '%s' "$found"
-            return 0
-        fi
-    done
-    return 1
-}
-
-ttf_regular="$(find_font DejaVuSans.ttf || true)"
-ttf_bold="$(find_font DejaVuSans-Bold.ttf || true)"
-
-make_font() {
-    local size="$1" name="$2" ttf="$3" out="$4"
-    [ -n "$ttf" ] || return 1
-    grub-mkfont --size="$size" --name="$name" --output="$out" "$ttf" 2>/dev/null
-}
-
-if command -v grub-mkfont >/dev/null 2>&1 && [ -n "$ttf_regular" ]; then
-    make_font 24 "DejaVu Sans Regular 24" "$ttf_regular" "$theme_dir/dejavu-24.pf2" || true
-    make_font 28 "DejaVu Sans Regular 28" "$ttf_regular" "$theme_dir/dejavu-28.pf2" || true
-    make_font 32 "DejaVu Sans Bold 32"    "$ttf_bold"    "$theme_dir/dejavu-32-bold.pf2" || true
-    info "   шрифты темы: $(find "$theme_dir" -name '*.pf2' | wc -l) файл(ов)"
-else
-    if ! command -v grub-mkfont >/dev/null 2>&1; then
-        info "   причина: не найден grub-mkfont (pacman -S grub)"
-    else
-        info "   причина: не найден DejaVuSans.ttf (pacman -S ttf-dejavu)"
-    fi
-    info "   тема возьмёт стандартный шрифт GRUB"
-fi
-
+# Тема использует только стандартный Unifont из unicode.pf2 — свои .pf2
+# не генерируем: grub-mkfont в контейнере сборки ведёт себя по-разному,
+# а без шрифта GRUB всё равно рисует меню стандартным.
 if [ -f /usr/share/grub/unicode.pf2 ]; then
     cp /usr/share/grub/unicode.pf2 "$profile/grub/fonts/unicode.pf2"
     cp /usr/share/grub/unicode.pf2 "$theme_dir/unicode.pf2"
+    info "   шрифт: unicode.pf2"
 else
     info "   предупреждение: /usr/share/grub/unicode.pf2 не найден"
 fi
-
-info "копирую шрифты темы внутрь образа (нужны портативной установке)"
-cp -a "$theme_dir"/*.pf2 "$brand_grub/" 2>/dev/null || true
 
 info "проверяю версию сборки"
 if [ -f "$profile/VERSION" ]; then
