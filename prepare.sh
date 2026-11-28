@@ -75,20 +75,21 @@ theme_dir="$profile/grub/themes/doublecolor"
 mkdir -p "$theme_dir" "$profile/grub/fonts"
 cp -a "$brand_grub/." "$theme_dir/"
 
-ttf_regular=""
-ttf_bold=""
-for candidate in \
-    /usr/share/fonts/TTF/DejaVuSans.ttf \
-    /usr/share/fonts/dejavu/DejaVuSans.ttf \
-    /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf; do
-    [ -f "$candidate" ] && ttf_regular="$candidate" && break
-done
-for candidate in \
-    /usr/share/fonts/TTF/DejaVuSans-Bold.ttf \
-    /usr/share/fonts/dejavu/DejaVuSans-Bold.ttf \
-    /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf; do
-    [ -f "$candidate" ] && ttf_bold="$candidate" && break
-done
+find_font() {
+    local name="$1" dir found
+    for dir in /usr/share/fonts /usr/local/share/fonts "$HOME/.fonts"; do
+        [ -d "$dir" ] || continue
+        found="$(find "$dir" -type f -name "$name" 2>/dev/null | head -n1)"
+        if [ -n "$found" ]; then
+            printf '%s' "$found"
+            return 0
+        fi
+    done
+    return 1
+}
+
+ttf_regular="$(find_font DejaVuSans.ttf || true)"
+ttf_bold="$(find_font DejaVuSans-Bold.ttf || true)"
 
 make_font() {
     local size="$1" name="$2" ttf="$3" out="$4"
@@ -102,8 +103,12 @@ if command -v grub-mkfont >/dev/null 2>&1 && [ -n "$ttf_regular" ]; then
     make_font 32 "DejaVu Sans Bold 32"    "$ttf_bold"    "$theme_dir/dejavu-32-bold.pf2" || true
     info "   шрифты темы: $(find "$theme_dir" -name '*.pf2' | wc -l) файл(ов)"
 else
-    info "   grub-mkfont или DejaVu не найдены — тема возьмёт стандартный шрифт"
-    info "   (для полного вида: pacman -S grub ttf-dejavu)"
+    if ! command -v grub-mkfont >/dev/null 2>&1; then
+        info "   причина: не найден grub-mkfont (pacman -S grub)"
+    else
+        info "   причина: не найден DejaVuSans.ttf (pacman -S ttf-dejavu)"
+    fi
+    info "   тема возьмёт стандартный шрифт GRUB"
 fi
 
 if [ -f /usr/share/grub/unicode.pf2 ]; then
@@ -131,7 +136,7 @@ fi
 info "проверяю метку ISO в boot-конфигах"
 label="$(sed -n 's/^iso_label="\(.*\)"$/\1/p' "$profile/profiledef.sh")"
 [ -n "$label" ] || die "не удалось прочитать iso_label из profiledef.sh"
-if grep -rho 'archisolabel=[A-Za-z0-9_]*' "$profile/efiboot" "$profile/syslinux" "$profile/grub" \
+if grep -rhoE 'archisolabel=[A-Za-z0-9_]+' "$profile/efiboot" "$profile/syslinux" "$profile/grub" \
     | sort -u | grep -qv "archisolabel=$label"; then
     die "метка в boot-конфигах не совпадает с iso_label=$label"
 fi
