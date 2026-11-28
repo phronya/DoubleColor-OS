@@ -234,6 +234,10 @@ install -d -m 750 "$TARGET/etc/sudoers.d"
 printf '%%wheel ALL=(ALL:ALL) ALL\n' > "$TARGET/etc/sudoers.d/10-wheel"
 chmod 440 "$TARGET/etc/sudoers.d/10-wheel"
 
+echo "   оформление DoubleColor OS"
+/usr/share/doublecolor/branding/apply.sh "$TARGET" || \
+    die "не удалось применить оформление (нет /usr/share/doublecolor/branding?)"
+
 # ---------- fstab и пользователь ----------
 say "5/6: fstab и пользователь"
 genfstab -U "$TARGET" | awk '
@@ -249,7 +253,7 @@ echo "   пользователь $USER_NAME добавлен в wheel"
 
 # ---------- chroot ----------
 say "6/6: initramfs, сервисы, загрузчик"
-arch-chroot "$TARGET" ln -sf "/usr/share/zoneinfo/UTC" /etc/localtime
+arch-chroot "$TARGET" ln -sf "/usr/share/zoneinfo/Asia/Yekaterinburg" /etc/localtime
 arch-chroot "$TARGET" locale-gen
 arch-chroot "$TARGET" mkinitcpio -P
 arch-chroot "$TARGET" /bin/bash -c '
@@ -274,10 +278,8 @@ EOF
     cat > "$TARGET/boot/loader/entries/doublecolor.conf" <<EOF
 title   DoubleColor OS
 linux   /vmlinuz-linux-zen
-initrd  /intel-ucode.img
-initrd  /amd-ucode.img
 initrd  /initramfs-linux-zen.img
-options root=UUID=$uuid rw quiet zswap.enabled=0 nowatchdog
+options root=UUID=$uuid rw quiet splash vt.global_cursor_default=0 zswap.enabled=0 nowatchdog
 EOF
     echo "   /boot/loader/entries/doublecolor.conf"
 }
@@ -310,7 +312,7 @@ DoubleColor OS установлена на $DEVICE.
   * вход через SDDM, сессия Plasma (Wayland);
   * окно «Диски»: ~/.local/bin/drives.py; монитор: ~/.local/bin/sysmon.sh;
   * раздел DATA (exFAT) виден в Windows — для обмена файлами;
-  * часы и часовой пояс: sudo timedatectl set-timezone Europe/Yekaterinburg.
+  * часовой пояс уже выставлен: Asia/Yekaterinburg (проверить: timedatectl).
 
 Перенос на внутренний диск — раздел README «Перенос на внутренний диск»:
   dd/Clonezilla + chroot либо tar-подход (System Tar & Restore).

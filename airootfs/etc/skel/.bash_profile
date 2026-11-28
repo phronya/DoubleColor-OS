@@ -1,5 +1,5 @@
-# ~/.bash_profile - DoubleColor OS
-# Bash chitaet etot fajl vmesto ~/.profile, poetomu podklyuchaem oba.
+# ~/.bash_profile — DoubleColor OS
+# Bash читает этот файл вместо ~/.profile, поэтому подключаем оба.
 
 [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 [ -f "$HOME/.profile" ] && . "$HOME/.profile"

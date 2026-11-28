@@ -90,6 +90,12 @@ spectacle
 ark
 kwallet-pam
 libwacom
+# «Сведения о системе» и русские переводы Qt/Plasma
+kinfocenter
+qt6-translations
+
+# --- Экран загрузки и выключения (Plymouth) ---
+plymouth
 
 # --- XWayland и мелкие утилиты ---
 xorg-xwayland
@@ -136,6 +142,8 @@ ccid
 
 # --- Офис и браузер ---
 libreoffice-fresh
+libreoffice-fresh-ru
+hunspell-ru
 zathura
 zathura-pdf-mupdf
 poppler

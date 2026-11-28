@@ -34,8 +34,8 @@ jobs:
         id: ver
         run: echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
 
-      - name: Установка archiso
-        run: pacman -S --noconfirm --needed archiso
+      - name: Установка archiso и шрифтов темы загрузки
+        run: pacman -S --noconfirm --needed archiso grub ttf-dejavu
 
       - name: Сборка ISO
         run: |

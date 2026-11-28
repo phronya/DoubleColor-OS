@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=О системе
+Comment=Версия DoubleColor OS и сведения о компьютере
+Comment[ru]=Версия DoubleColor OS и сведения о компьютере
+Exec=doublecolor-about
+Icon=doublecolor
+Terminal=false
+Categories=System;Settings;
+Keywords=about;version;система;версия;сведения;
+StartupNotify=true

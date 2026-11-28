@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""drives.py - okno "Diski" dlya DoubleColor OS.
+"""«Диски» — окно с буквами дисков для DoubleColor OS.
 
-Sverhu - bukva diska, snizu - nazvanie (metka toma, model ili imya ustroystva).
-Shema numeracii:
-  * disk tolko s sistemoy Linux            -> A:
-  * est chuzhie FS (NTFS, exFAT) ili drugaya OS -> nachinaya s C:
-  * ostalnye diski                         -> sleduyuschaya svobodnaya bukva
+Сверху — буква диска, снизу — название (метка тома, модель или имя устройства).
+Схема нумерации:
+  * диск только с системой Linux                 -> A:
+  * есть чужие ФС (NTFS, exFAT) или другая ОС    -> начиная с C:
+  * остальные диски                              -> следующая свободная буква
 
-Bukvy - tolko otobrazhenie. Yadro, fstab i zagruzchik rabotayut s UUID.
+Буквы — только отображение. Ядро, fstab и загрузчик работают с UUID.
 """
 
 import json

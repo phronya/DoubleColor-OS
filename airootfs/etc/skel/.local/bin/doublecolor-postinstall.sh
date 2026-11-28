@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# doublecolor-postinstall.sh - dovodka uzhe ustanovlennoj sistemy
-# Zapuskat posle archinstall: sudo ~/.local/bin/doublecolor-postinstall.sh
+# doublecolor-postinstall.sh — донастройка уже установленной системы.
+# Запускать после archinstall: sudo ~/.local/bin/doublecolor-postinstall.sh
 set -euo pipefail
 
 if [ "$(id -u)" -ne 0 ]; then

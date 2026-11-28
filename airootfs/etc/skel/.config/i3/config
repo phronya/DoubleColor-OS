@@ -1,5 +1,5 @@
 # i3 config - DoubleColor
-# Mod = Win (Super). Ctrl+Shift+Tab - monitor nagruzki.
+# Mod = Win (Super). Ctrl+Shift+Tab — монитор нагрузки.
 
 set $mod Mod4
 set $term alacritty
@@ -7,7 +7,7 @@ set $menu dmenu_run -i -p run: -fn "DejaVu Sans Mono:size=10"
 
 font pango:DejaVu Sans Mono 9
 
-# --- rabochie stoly ---
+# --- рабочие столы ---
 set $ws1 "1: web"
 set $ws2 "2: doc"
 set $ws3 "3: term"

@@ -1,0 +1,14 @@
+# Параметры GRUB для DoubleColor OS.
+# Применяется установщиком; после изменений: grub-mkconfig -o /boot/grub/grub.cfg
+
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_TIMEOUT_STYLE=menu
+GRUB_DISTRIBUTOR="DoubleColor OS"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash vt.global_cursor_default=0 zswap.enabled=0 nowatchdog"
+GRUB_CMDLINE_LINUX=""
+GRUB_THEME="/boot/grub/themes/doublecolor/theme.txt"
+GRUB_GFXMODE=auto
+GRUB_GFXPAYLOAD_LINUX=keep
+GRUB_DISABLE_SUBMENU=y
+GRUB_DISABLE_RECOVERY=true

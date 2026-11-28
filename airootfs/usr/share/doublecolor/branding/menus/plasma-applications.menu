@@ -1,0 +1,22 @@
+<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN" "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
+<!--
+  DoubleColor OS: единый список приложений вместо папок,
+  как в меню «Пуск» Windows 7.
+
+  Файл заменяет стандартный /etc/xdg/menus/plasma-applications.menu:
+  все .desktop-файлы попадают в корень меню, подменю не создаются,
+  поэтому KDE показывает приложения одним списком по алфавиту.
+-->
+<Menu>
+  <Name>Applications</Name>
+  <Directory>kde-main.directory</Directory>
+  <DefaultAppDirs/>
+  <DefaultDirectoryDirs/>
+  <Include>
+    <All/>
+  </Include>
+  <Layout>
+    <Merge type="menus"/>
+    <Merge type="files"/>
+  </Layout>
+</Menu>

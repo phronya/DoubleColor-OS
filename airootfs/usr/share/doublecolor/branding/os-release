@@ -1,0 +1,14 @@
+NAME="DoubleColor OS"
+PRETTY_NAME="DoubleColor OS x.0.2811.0 beta"
+ID=doublecolor
+ID_LIKE=arch
+BUILD_ID=rolling
+VERSION="x.0.2811.0 beta"
+VERSION_ID=x.0.2811.0
+VERSION_CODENAME=beta
+ANSI_COLOR="38;2;47;143;216"
+HOME_URL="https://github.com/phronya/DoubleColor-OS"
+DOCUMENTATION_URL="https://github.com/phronya/DoubleColor-OS/blob/main/README.md"
+SUPPORT_URL="https://github.com/phronya/DoubleColor-OS/issues"
+BUG_REPORT_URL="https://github.com/phronya/DoubleColor-OS/issues"
+LOGO=doublecolor

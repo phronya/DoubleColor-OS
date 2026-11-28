@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-chrome.sh - ustanovka Google Chrome iz AUR
+# install-chrome.sh — установка Google Chrome из AUR.
 #
 # В официальных репозиториях Arch Google Chrome нет: это проприетарный бинарник.
 # В образе уже стоит Chromium (тот же движок). Этот скрипт ставит именно Chrome.

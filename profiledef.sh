@@ -3,12 +3,12 @@
 
 iso_name="doublecoloros"
 iso_label="DOUBLECOLOR"
-iso_publisher="DoubleColor <https://example.org/doublecolor>"
-iso_application="DoubleColor OS x.0.02711.0 Live - рабочая ОС на базе Arch Linux"
-iso_version="x.0.02711.0"
+iso_publisher="DoubleColor OS <https://github.com/phronya/DoubleColor-OS>"
+iso_application="DoubleColor OS x.0.2811.0 beta - рабочая система на базе Arch Linux"
+iso_version="x.0.2811.0-beta"
 install_dir="arch"
 buildmodes=('iso')
-bootmodes=('bios.syslinux' 'uefi.systemd-boot')
+bootmodes=('bios.syslinux' 'uefi.grub')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
@@ -33,4 +33,7 @@ file_permissions=(
   ["/etc/skel/.local/bin/doublecolor-postinstall.sh"]="0:0:755"
   ["/usr/local/bin/doublecolor-install"]="0:0:755"
   ["/usr/local/bin/doublecolor-portable"]="0:0:755"
+  ["/usr/local/bin/doublecolor-about"]="0:0:755"
+  ["/usr/share/doublecolor/branding/apply.sh"]="0:0:755"
+  ["/usr/share/doublecolor/branding/system-shutdown/doublecolor-poweroff.sh"]="0:0:755"
 )

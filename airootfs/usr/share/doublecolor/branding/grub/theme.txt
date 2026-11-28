@@ -1,0 +1,55 @@
+# DoubleColor OS — тема GRUB.
+
+title-text: ""
+desktop-image: "background.png"
+desktop-color: "#0b1220"
+terminal-box: "menu_*.png"
+terminal-font: "Unifont Regular 16"
+
++ boot_menu {
+    left = 9%
+    top = 36%
+    width = 82%
+    height = 48%
+    item_font = "DejaVu Sans Regular 24"
+    item_color = "#c9d8ee"
+    selected_item_color = "#ffffff"
+    item_height = 54
+    item_padding = 12
+    item_spacing = 10
+    icon_width = 0
+    icon_height = 0
+    menu_pixmap_style = "menu_*.png"
+    selected_item_pixmap_style = "select_*.png"
+    scrollbar = false
+}
+
++ label {
+    left = 0
+    top = 9%
+    width = 100%
+    align = "center"
+    text = "Загрузка DoubleColor OS"
+    font = "DejaVu Sans Regular 28"
+    color = "#e8f0fc"
+}
+
++ label {
+    left = 0
+    top = 15%
+    width = 100%
+    align = "center"
+    text = "Версия x.0.2811.0 beta"
+    font = "Unifont Regular 16"
+    color = "#8fb0d8"
+}
+
++ label {
+    left = 0
+    top = 90%
+    width = 100%
+    align = "center"
+    text = "Стрелки — выбор, Enter — загрузка"
+    font = "Unifont Regular 16"
+    color = "#6f8db5"
+}

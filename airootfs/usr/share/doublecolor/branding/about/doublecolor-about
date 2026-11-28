@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""«О системе» — краткие сведения о DoubleColor OS."""
+
+import os
+import platform
+import shutil
+import subprocess
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk  # noqa: E402
+
+
+def os_release():
+    for path in ("/etc/os-release", "/usr/lib/os-release"):
+        if not os.path.exists(path):
+            continue
+        data = {}
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                if "=" in line:
+                    key, _, value = line.strip().partition("=")
+                    data[key] = value.strip().strip('"')
+        return data
+    return {}
+
+
+def run(*args):
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=4)
+        return (result.stdout or result.stderr).strip().splitlines()[0]
+    except Exception:
+        return ""
+
+
+def cpu_name():
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or "—"
+
+
+def ram_total():
+    try:
+        with open("/proc/meminfo", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("MemTotal:"):
+                    return f"{int(line.split()[1]) / 1048576:.1f} ГБ"
+    except (OSError, ValueError):
+        pass
+    return "—"
+
+
+def disk_root():
+    usage = shutil.disk_usage("/")
+    return f"{usage.free // 1024 ** 3} ГБ свободно из {usage.total // 1024 ** 3} ГБ"
+
+
+def plasma_version():
+    text = run("plasmashell", "--version")
+    for word in text.replace("(", " ").replace(")", " ").split():
+        if word[:1].isdigit():
+            return word
+    return "—"
+
+
+def main():
+    release = os_release()
+    rows = [
+        ("Система", release.get("PRETTY_NAME", "DoubleColor OS")),
+        ("Версия", release.get("VERSION", "x.0.2811.0 beta")),
+        ("Ядро", platform.release()),
+        ("Рабочий стол", f"KDE Plasma {plasma_version()}"),
+        ("Процессор", cpu_name()),
+        ("Память", ram_total()),
+        ("Диск", disk_root()),
+        ("Сессия", os.environ.get("XDG_SESSION_TYPE", "—")),
+    ]
+
+    window = Gtk.Window(title="О системе")
+    window.set_default_size(560, -1)
+    window.set_resizable(False)
+    window.set_position(Gtk.WindowPosition.CENTER)
+    window.connect("destroy", Gtk.main_quit)
+
+    outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+    outer.set_border_width(22)
+    window.add(outer)
+
+    header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
+    outer.pack_start(header, False, False, 0)
+
+    icon = Gtk.Image.new_from_icon_name("doublecolor", Gtk.IconSize.DIALOG)
+    icon.set_pixel_size(96)
+    header.pack_start(icon, False, False, 0)
+
+    titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+    header.pack_start(titles, True, True, 0)
+
+    name = Gtk.Label()
+    name.set_markup("<span size='x-large' weight='bold'>DoubleColor OS</span>")
+    name.set_xalign(0)
+    titles.pack_start(name, False, False, 0)
+
+    version = Gtk.Label()
+    version.set_markup(
+        f"<span size='large' foreground='#2f8fd8'>{release.get('VERSION', 'x.0.2811.0 beta')}</span>"
+    )
+    version.set_xalign(0)
+    titles.pack_start(version, False, False, 0)
+
+    subtitle = Gtk.Label(label="рабочая система на базе Arch Linux")
+    subtitle.set_xalign(0)
+    subtitle.get_style_context().add_class("dim-label")
+    titles.pack_start(subtitle, False, False, 0)
+
+    grid = Gtk.Grid(column_spacing=24, row_spacing=8)
+    outer.pack_start(grid, True, True, 0)
+
+    for index, (title, value) in enumerate(rows):
+        caption = Gtk.Label()
+        caption.set_markup(f"<b>{title}</b>")
+        caption.set_xalign(0)
+        grid.attach(caption, 0, index, 1, 1)
+
+        data = Gtk.Label(label=value)
+        data.set_xalign(0)
+        data.set_line_wrap(True)
+        data.set_max_width_chars(46)
+        grid.attach(data, 1, index, 1, 1)
+
+    button = Gtk.Button(label="Закрыть")
+    button.connect("clicked", lambda _widget: Gtk.main_quit())
+    outer.pack_start(button, False, False, 0)
+
+    window.show_all()
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

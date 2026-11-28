@@ -93,6 +93,10 @@ install -d -m 750 "$TARGET/etc/sudoers.d"
 printf '%%wheel ALL=(ALL:ALL) ALL\n' > "$TARGET/etc/sudoers.d/10-wheel"
 chmod 440 "$TARGET/etc/sudoers.d/10-wheel"
 
+echo "   оформление DoubleColor OS"
+/usr/share/doublecolor/branding/apply.sh "$TARGET" || \
+    die "не удалось применить оформление (нет /usr/share/doublecolor/branding?)"
+
 say "Обновляю домашние каталоги"
 HOOK='[ -f "$HOME/.profile" ] && . "$HOME/.profile"'
 for home in "$TARGET"/home/*; do

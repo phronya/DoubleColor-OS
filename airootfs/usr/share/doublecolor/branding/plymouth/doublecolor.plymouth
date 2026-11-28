@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=DoubleColor
+Description=Заставка DoubleColor OS
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/doublecolor
+ScriptFile=/usr/share/plymouth/themes/doublecolor/doublecolor.script

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# prepare.sh - готовит чистую копию профиля для mkarchiso.
-# Источник остается чистым (удобно для git), сборка осуществляется внутри профиля.
+# prepare.sh — готовит чистую копию профиля для mkarchiso.
+# Источник остаётся чистым (удобно для git), сборка идёт в build/profile.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -69,10 +69,57 @@ else
     info "   releng не найден, оставляю файл из репозитория"
 fi
 
+info "собираю тему GRUB для меню загрузки"
+brand_grub="$profile/airootfs/usr/share/doublecolor/branding/grub"
+theme_dir="$profile/grub/themes/doublecolor"
+mkdir -p "$theme_dir" "$profile/grub/fonts"
+cp -a "$brand_grub/." "$theme_dir/"
+
+ttf_regular=""
+ttf_bold=""
+for candidate in \
+    /usr/share/fonts/TTF/DejaVuSans.ttf \
+    /usr/share/fonts/dejavu/DejaVuSans.ttf \
+    /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf; do
+    [ -f "$candidate" ] && ttf_regular="$candidate" && break
+done
+for candidate in \
+    /usr/share/fonts/TTF/DejaVuSans-Bold.ttf \
+    /usr/share/fonts/dejavu/DejaVuSans-Bold.ttf \
+    /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf; do
+    [ -f "$candidate" ] && ttf_bold="$candidate" && break
+done
+
+make_font() {
+    local size="$1" name="$2" ttf="$3" out="$4"
+    [ -n "$ttf" ] || return 1
+    grub-mkfont --size="$size" --name="$name" --output="$out" "$ttf" 2>/dev/null
+}
+
+if command -v grub-mkfont >/dev/null 2>&1 && [ -n "$ttf_regular" ]; then
+    make_font 24 "DejaVu Sans Regular 24" "$ttf_regular" "$theme_dir/dejavu-24.pf2" || true
+    make_font 28 "DejaVu Sans Regular 28" "$ttf_regular" "$theme_dir/dejavu-28.pf2" || true
+    make_font 32 "DejaVu Sans Bold 32"    "$ttf_bold"    "$theme_dir/dejavu-32-bold.pf2" || true
+    info "   шрифты темы: $(find "$theme_dir" -name '*.pf2' | wc -l) файл(ов)"
+else
+    info "   grub-mkfont или DejaVu не найдены — тема возьмёт стандартный шрифт"
+    info "   (для полного вида: pacman -S grub ttf-dejavu)"
+fi
+
+if [ -f /usr/share/grub/unicode.pf2 ]; then
+    cp /usr/share/grub/unicode.pf2 "$profile/grub/fonts/unicode.pf2"
+    cp /usr/share/grub/unicode.pf2 "$theme_dir/unicode.pf2"
+else
+    info "   предупреждение: /usr/share/grub/unicode.pf2 не найден"
+fi
+
+info "копирую шрифты темы внутрь образа (нужны портативной установке)"
+cp -a "$theme_dir"/*.pf2 "$brand_grub/" 2>/dev/null || true
+
 info "проверяю версию сборки"
 if [ -f "$profile/VERSION" ]; then
     file_version="$(tr -d '[:space:]' < "$profile/VERSION")"
-    iso_version="$(sed -n 's/^iso_version="\(.*\)"$/\1/p' "$profile/profiledef.sh")"
+    iso_version="$(sed -n 's/^iso_version="\(.*\)"$/\1/p' "$profile/profiledef.sh" | tr -d '[:space:]')"
     [ -n "$iso_version" ] || die "не удалось прочитать iso_version"
     [ "$file_version" = "$iso_version" ] || \
         die "VERSION=$file_version, а iso_version=$iso_version — приведите к одному"
@@ -84,15 +131,28 @@ fi
 info "проверяю метку ISO в boot-конфигах"
 label="$(sed -n 's/^iso_label="\(.*\)"$/\1/p' "$profile/profiledef.sh")"
 [ -n "$label" ] || die "не удалось прочитать iso_label из profiledef.sh"
-if grep -rho 'archisolabel=[A-Za-z0-9_]*' "$profile/efiboot" "$profile/syslinux" \
+if grep -rho 'archisolabel=[A-Za-z0-9_]*' "$profile/efiboot" "$profile/syslinux" "$profile/grub" \
     | sort -u | grep -qv "archisolabel=$label"; then
     die "метка в boot-конфигах не совпадает с iso_label=$label"
 fi
 info "   метка: $label"
 
+info "проверяю, что initrd не ссылается на ucode-образы"
+if grep -rqs -- '-ucode\.img\|ucode\.cpio' "$profile/syslinux" "$profile/efiboot" "$profile/grub"; then
+    die "в boot-конфигах остались ссылки на ucode-образы: их нет в /boot, загрузка сломается"
+fi
+info "   ucode встроен в initramfs, отдельных образов нет — ок"
+
 info "проверяю обязательные файлы"
 for f in profiledef.sh packages.x86_64 pacman.conf \
-         airootfs/etc/pacman.conf airootfs/etc/skel/.xinitrc; do
+         grub/grub.cfg syslinux/syslinux.cfg syslinux/splash.png \
+         airootfs/etc/pacman.conf airootfs/etc/skel/.xinitrc \
+         airootfs/usr/share/doublecolor/branding/os-release \
+         airootfs/usr/share/doublecolor/branding/about/doublecolor-about \
+         airootfs/usr/share/doublecolor/branding/apply.sh \
+         airootfs/usr/share/doublecolor/branding/menus/plasma-applications.menu \
+         airootfs/usr/share/doublecolor/branding/plymouth/doublecolor.script \
+         airootfs/usr/share/doublecolor/branding/system-shutdown/doublecolor-poweroff.sh; do
     [ -f "$profile/$f" ] || die "отсутствует $f"
 done
 
