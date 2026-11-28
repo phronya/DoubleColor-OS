@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Звук DoubleColor
+Name[en]=DoubleColor Audio
+Comment=Запуск PipeWire и WirePlumber в сессии
+Comment[en]=Start PipeWire and WirePlumber in the session
+Exec=/usr/local/bin/doublecolor-audio-start
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=1

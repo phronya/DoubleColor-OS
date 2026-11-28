@@ -1,0 +1,15 @@
+#!/bin/sh
+# DoubleColor OS: поднимает звук в пользовательской сессии.
+#
+# В образе юниты PipeWire включены (systemctl --global enable), но в Live-сессии
+# они остаются inactive, и звука нет вообще: ни устройств, ни выходов. Поэтому
+# демоны запускаются из автозапуска рабочего стола. Повторный запуск безопасен:
+# уже работающие процессы пропускаются, при отсутствии пакетов шаг игнорируется.
+
+for unit in pipewire pipewire-pulse wireplumber; do
+    command -v "$unit" >/dev/null 2>&1 || continue
+    pidof "$unit" >/dev/null 2>&1 && continue
+    setsid "$unit" >/dev/null 2>&1 &
+done
+
+exit 0

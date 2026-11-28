@@ -49,6 +49,11 @@ install -Dm644 "$BRAND/about/doublecolor-about.desktop" \
 install -Dm644 "$BRAND/about/doublecolor.png" "$TARGET/usr/share/pixmaps/doublecolor.png"
 say "/usr/local/bin/doublecolor-about"
 
+# --- звук: автозапуск PipeWire в сессии -----------------------------------
+install -Dm755 "$BRAND/audio/doublecolor-audio-start" "$TARGET/usr/local/bin/doublecolor-audio-start"
+install -Dm644 "$BRAND/audio/doublecolor-audio.desktop" "$TARGET/etc/xdg/autostart/doublecolor-audio.desktop"
+say "автозапуск звука (PipeWire, WirePlumber)"
+
 # --- единый список приложений --------------------------------------------
 install -Dm644 "$BRAND/menus/plasma-applications.menu" \
     "$TARGET/etc/xdg/menus/plasma-applications.menu"

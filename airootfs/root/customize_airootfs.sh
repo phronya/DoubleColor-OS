@@ -39,6 +39,10 @@ echo "==> звук: PipeWire для всех пользователей"
 # системе: звука нет, хотя карта видна в aplay.
 systemctl --global enable pipewire.socket pipewire-pulse.socket wireplumber.service 2>/dev/null || true
 
+echo "==> звук: автозапуск в сессии"
+install -Dm755 "$BRAND/audio/doublecolor-audio-start" /usr/local/bin/doublecolor-audio-start
+install -Dm644 "$BRAND/audio/doublecolor-audio.desktop" /etc/xdg/autostart/doublecolor-audio.desktop
+
 echo "==> заставка при выключении"
 # Plymouth на Live не запускается при загрузке (нет хука в initramfs), но режим
 # shutdown работает и без него: unit гасит консоль логотипом перед питанием.
