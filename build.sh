@@ -8,6 +8,12 @@ profile="$here/build/profile"
 work="$here/build/work"
 out="$here/build/out"
 
+# Страховка от CRLF: скрипт с \r в shebang не запускается (env: 'bash\r').
+if command -v sed >/dev/null 2>&1; then
+    find "$here" -type f -name '*.sh' -exec sed -i 's/\r$//' {} + 2>/dev/null || true
+    find "$here/airootfs/usr/local/bin" -type f -exec sed -i 's/\r$//' {} + 2>/dev/null || true
+fi
+
 if [ "${1:-}" = "--prepared" ]; then
     shift
 else
